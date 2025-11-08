@@ -1,7 +1,5 @@
-"""Multi-nodal healthcare agent implementation integrated with LiveKit."""
+"""Multi-nodal agent implementation integrated with LiveKit."""
 
-import asyncio
-import logging
 import os
 from pathlib import Path
 from typing import Optional
@@ -23,7 +21,7 @@ from livekit.plugins import noise_cancellation, silero
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
 
 from agents.config_store import ConfigStore
-from agents.multi_node_router import MultiNodeRouter, ConversationContext
+from agents.multi_node_router import MultiNodeRouter
 from agents.node_executor import NodeExecutor
 from agents.config_models import MultiNodeAgentConfig
 from utils.logger import configure_logging, get_logger
@@ -35,10 +33,9 @@ load_dotenv(".env.local")
 # Global instances
 _router: Optional[MultiNodeRouter] = None
 _executor: Optional[NodeExecutor] = None
-_session_mapping: dict = {}
 
 
-class MultiNodeHealthcareAssistant(Agent):
+class MultiNodeAgent(Agent):
     """Multi-nodal conversational agent with dynamic configuration."""
 
     def __init__(
@@ -54,7 +51,6 @@ class MultiNodeHealthcareAssistant(Agent):
             executor: Node executor for running node logic
             config: Agent configuration with domain-specific settings
         """
-        # Use agent instructions from config, with fallback
         instructions = (
             config.agentInstructions
             or """You are a professional assistant.
@@ -75,13 +71,12 @@ def prewarm(proc: JobProcess):
 
 async def entrypoint(ctx: JobContext):
     """Main entrypoint for multi-nodal agent."""
-    # Configure logging
     configure_logging(level="ERROR", log_format="json")
 
     ctx.log_context_fields = {"room": ctx.room.name}
 
     # Load multi-nodal configuration (dynamic, can be any domain)
-    config_file = os.getenv("AGENT_CONFIG_FILE", "ecommerce_multinode.json")
+    config_file = os.getenv("AGENT_CONFIG_FILE", "realestate_multinode.json")
     config_path = Path(__file__).parent.parent / "configs" / config_file
 
     try:
@@ -99,7 +94,6 @@ async def entrypoint(ctx: JobContext):
     else:
         from agents.llm_provider import MockLLMProvider
 
-        # Use description or name from config for mock provider
         mock_response = f"I'm {multi_node_config.name}. How can I assist you?"
         llm_provider = MockLLMProvider(mock_response)
 
@@ -128,19 +122,11 @@ async def entrypoint(ctx: JobContext):
         metrics.log_metrics(ev.metrics)
         usage_collector.collect(ev.metrics)
 
-    async def log_usage():
-        summary = usage_collector.get_summary()
-
-    async def cleanup():
-        """Cleanup on shutdown."""
-        _session_mapping.clear()
-        await log_usage()
-
-    ctx.add_shutdown_callback(cleanup)
+    ctx.add_shutdown_callback(lambda: usage_collector.get_summary())
 
     # Start the session
     await session.start(
-        agent=MultiNodeHealthcareAssistant(
+        agent=MultiNodeAgent(
             router=_router, executor=_executor, config=multi_node_config
         ),
         room=ctx.room,
