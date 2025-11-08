@@ -1,0 +1,436 @@
+{
+	"id": "healthcare-multinode-001",
+	"name": "Healthcare Management Multi-Node Agent",
+	"version": "2.0",
+	"description": "Advanced multi-nodal healthcare agent with multiple conversational paths. Users can navigate between Medicine/Pharmacy, Doctor Appointments, Medical Reports, and Health Records services with full chat context preservation.",
+	"agentInstructions": "You are a professional healthcare management assistant. You help users with medicine orders, doctor appointments, medical reports, and health records. You are empathetic, professional, and guide users through their healthcare needs. Always validate user health ID when required. Keep responses concise and helpful.",
+	"domainContext": "Healthcare services including pharmacy, appointments, reports, and health records management",
+	"entryNode": "welcome",
+	"globalTools": ["hangup", "transfer"],
+	"nodes": [
+		{
+			"id": "welcome",
+			"type": "entry",
+			"name": "Welcome & Service Selection",
+			"description": "Initial greeting and service selection node. Presents all available healthcare services and guides users to appropriate department.",
+			"prompt": {
+				"template": "Welcome to Healthcare Management System! I'm here to help you with your healthcare needs.\n\nYou can reach me for:\n1. **MEDICINE & PHARMACY** - Order medicines, check availability, track prescriptions, refill medications\n2. **DOCTOR APPOINTMENTS** - Schedule appointments, check availability, reschedule or cancel\n3. **MEDICAL REPORTS** - Download health reports, view lab results, request documents\n4. **HEALTH RECORDS** - Access medical history, vaccination records, update health information\n\nUser request: {{user_input}}\n\nBased on the user's request, determine which service they need and respond accordingly.",
+				"systemPrompt": "You are a professional healthcare management assistant. You are empathetic, professional, and helpful. Your goal is to understand the user's healthcare needs and guide them to the appropriate service. Be concise and friendly.",
+				"maxTokens": 150,
+				"temperature": 0.6
+			},
+			"tools": ["get_health_id"],
+			"context": {
+				"user_input": "required"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "intent",
+						"expression": "User wants to order medicine, refill prescription, or get pharmacy services"
+					},
+					"targetNode": "pharmacy_service",
+					"priority": 11,
+					"description": "User wants medicine or pharmacy services (intent-based)"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(medicine|pharmacy|drug|prescription|refill|order.*medicine|medicine.*order)"
+					},
+					"targetNode": "pharmacy_service",
+					"priority": 10,
+					"description": "User wants medicine or pharmacy services"
+				},
+				{
+					"condition": {
+						"type": "intent",
+						"expression": "User wants to book or manage doctor appointments"
+					},
+					"targetNode": "appointments_service",
+					"priority": 11,
+					"description": "User wants to schedule or manage doctor appointments (intent-based)"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(doctor|appointment|schedule.*doctor|book.*appointment|consult|medical.*consultation)"
+					},
+					"targetNode": "appointments_service",
+					"priority": 10,
+					"description": "User wants to schedule or manage doctor appointments"
+				},
+				{
+					"condition": {
+						"type": "intent",
+						"expression": "User wants to download, view, or access medical reports and lab results"
+					},
+					"targetNode": "reports_service",
+					"priority": 11,
+					"description": "User wants to access or download medical reports (intent-based)"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(report|download|health.*report|test.*result|result|lab|medical.*document)"
+					},
+					"targetNode": "reports_service",
+					"priority": 10,
+					"description": "User wants to access or download medical reports"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(record|history|medical.*history|vaccination|health.*info|personal.*health)"
+					},
+					"targetNode": "health_records_service",
+					"priority": 10,
+					"description": "User wants to check or update health records"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call|hang.*up)"
+					},
+					"targetNode": "goodbye",
+					"priority": 9,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "welcome",
+					"priority": 0,
+					"description": "Default fallback - repeat welcome"
+				}
+			]
+		},
+		{
+			"id": "pharmacy_service",
+			"type": "service",
+			"name": "Medicine & Pharmacy Service",
+			"description": "Handles all medicine-related requests including ordering, availability check, and prescription management.",
+			"prompt": {
+				"template": "You are a pharmacy specialist assistant. You help customers with:\n- Ordering medicines with proper prescriptions\n- Checking medicine availability and pricing\n- Tracking prescription refills\n- Providing delivery status updates\n- Suggesting alternative medicines if not available\n\nUser Health ID: {{health_id or 'Not yet provided'}}\nUser Request: {{user_input}}\n\nProvide professional pharmaceutical advice and help them complete their medicine order if needed. Always ask for prescription if ordering new medicines.",
+				"systemPrompt": "You are a knowledgeable pharmacy assistant. Be professional, helpful, and ensure customer safety by asking about allergies and existing medications. Help users order medicines, check stock, and manage prescriptions. Always maintain HIPAA compliance and patient privacy.",
+				"maxTokens": 200,
+				"temperature": 0.5
+			},
+			"tools": [
+				"get_health_id",
+				"search_medicines",
+				"check_availability",
+				"place_medicine_order",
+				"get_order_status"
+			],
+			"context": {
+				"health_id": "optional",
+				"medicine_name": "optional",
+				"quantity": "optional"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(back|main.*menu|other.*service|switch|home|main)"
+					},
+					"targetNode": "welcome",
+					"priority": 10,
+					"description": "User wants to go back to main menu"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(doctor|appointment|schedule)"
+					},
+					"targetNode": "appointments_service",
+					"priority": 9,
+					"description": "User wants to switch to appointments"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(report|download|result)"
+					},
+					"targetNode": "reports_service",
+					"priority": 9,
+					"description": "User wants to switch to reports"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "pharmacy_service",
+					"priority": 0,
+					"description": "Continue in pharmacy service"
+				}
+			]
+		},
+		{
+			"id": "appointments_service",
+			"type": "service",
+			"name": "Doctor Appointments Service",
+			"description": "Handles doctor appointment scheduling, rescheduling, cancellation, and availability checking.",
+			"prompt": {
+				"template": "You are a professional appointment scheduling assistant. You help with:\n- Scheduling new doctor appointments\n- Viewing existing appointments\n- Rescheduling appointments\n- Canceling appointments\n- Finding available doctors and time slots\n- Providing appointment reminders\n\nUser Health ID: {{health_id or 'Not yet provided'}}\nUser Request: {{user_input}}\n\nHelp them manage their appointments professionally and efficiently. Always confirm appointment details before scheduling.",
+				"systemPrompt": "You are a professional medical appointment scheduler. Be organized, polite, and efficient. Help users book, reschedule, or cancel appointments. Always confirm details and provide appointment confirmations. Maintain patient privacy and professionalism.",
+				"maxTokens": 200,
+				"temperature": 0.5
+			},
+			"tools": [
+				"get_health_id",
+				"list_available_doctors",
+				"check_appointment_slots",
+				"schedule_appointment",
+				"get_existing_appointments",
+				"cancel_appointment",
+				"reschedule_appointment"
+			],
+			"context": {
+				"health_id": "optional",
+				"doctor_name": "optional",
+				"appointment_date": "optional",
+				"appointment_type": "optional"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(back|main.*menu|other.*service|switch|home|main)"
+					},
+					"targetNode": "welcome",
+					"priority": 10,
+					"description": "User wants to go back to main menu"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(medicine|pharmacy|drug)"
+					},
+					"targetNode": "pharmacy_service",
+					"priority": 9,
+					"description": "User wants to switch to pharmacy"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(report|download|result)"
+					},
+					"targetNode": "reports_service",
+					"priority": 9,
+					"description": "User wants to switch to reports"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "appointments_service",
+					"priority": 0,
+					"description": "Continue in appointments service"
+				}
+			]
+		},
+		{
+			"id": "reports_service",
+			"type": "service",
+			"name": "Medical Reports Service",
+			"description": "Handles medical report access, download, and related document requests.",
+			"prompt": {
+				"template": "You are a medical records specialist. You help with:\n- Downloading health reports and lab results\n- Viewing medical test results\n- Requesting report copies\n- Arranging document delivery\n- Explaining medical reports\n- Accessing historical reports\n\nUser Health ID: {{health_id or 'Not yet provided'}}\nUser Request: {{user_input}}\n\nProvide professional assistance in accessing and understanding medical documents. Help them download or request needed reports.",
+				"systemPrompt": "You are a professional medical records specialist. Be helpful in providing access to medical documents while maintaining confidentiality. Help users understand their reports, arrange downloads, and ensure they receive all necessary documentation. Maintain HIPAA compliance.",
+				"maxTokens": 200,
+				"temperature": 0.5
+			},
+			"tools": [
+				"get_health_id",
+				"list_available_reports",
+				"download_report",
+				"request_report_copy",
+				"get_report_details"
+			],
+			"context": {
+				"health_id": "optional",
+				"report_type": "optional",
+				"report_date": "optional"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(back|main.*menu|other.*service|switch|home|main)"
+					},
+					"targetNode": "welcome",
+					"priority": 10,
+					"description": "User wants to go back to main menu"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(medicine|pharmacy|drug)"
+					},
+					"targetNode": "pharmacy_service",
+					"priority": 9,
+					"description": "User wants to switch to pharmacy"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(doctor|appointment|schedule)"
+					},
+					"targetNode": "appointments_service",
+					"priority": 9,
+					"description": "User wants to switch to appointments"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "reports_service",
+					"priority": 0,
+					"description": "Continue in reports service"
+				}
+			]
+		},
+		{
+			"id": "health_records_service",
+			"type": "service",
+			"name": "Health Records Service",
+			"description": "Handles access to medical history, vaccinations, and health information updates.",
+			"prompt": {
+				"template": "You are a health records manager. You help with:\n- Accessing complete medical history\n- Viewing vaccination records\n- Updating personal health information\n- Reviewing chronic conditions\n- Managing allergies and medications\n- Updating emergency contacts\n\nUser Health ID: {{health_id or 'Not yet provided'}}\nUser Request: {{user_input}}\n\nHelp them manage their health records professionally and ensure all information is accurate and up-to-date.",
+				"systemPrompt": "You are a professional health records manager. Help users access and update their medical information. Be accurate, thorough, and ensure all data is securely handled. Maintain patient privacy and HIPAA compliance. Help them keep their records current and accurate.",
+				"maxTokens": 200,
+				"temperature": 0.5
+			},
+			"tools": [
+				"get_health_id",
+				"get_medical_history",
+				"get_vaccination_records",
+				"update_health_info",
+				"get_allergies",
+				"update_emergency_contact"
+			],
+			"context": {
+				"health_id": "optional"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(back|main.*menu|other.*service|switch|home|main)"
+					},
+					"targetNode": "welcome",
+					"priority": 10,
+					"description": "User wants to go back to main menu"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(medicine|pharmacy|drug)"
+					},
+					"targetNode": "pharmacy_service",
+					"priority": 9,
+					"description": "User wants to switch to pharmacy"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(doctor|appointment|schedule)"
+					},
+					"targetNode": "appointments_service",
+					"priority": 9,
+					"description": "User wants to switch to appointments"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(report|download|result)"
+					},
+					"targetNode": "reports_service",
+					"priority": 9,
+					"description": "User wants to switch to reports"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "health_records_service",
+					"priority": 0,
+					"description": "Continue in health records service"
+				}
+			]
+		},
+		{
+			"id": "goodbye",
+			"type": "exit",
+			"name": "Goodbye Node",
+			"description": "Graceful call ending node with hangup tool execution.",
+			"prompt": {
+				"template": "Thank you for using our Healthcare Management System. We hope we could assist you with your healthcare needs today. Please feel free to reach out anytime you need help. Have a great day and take care of your health! [HANGUP]",
+				"systemPrompt": "You are providing a warm, professional goodbye message. Thank the user for using the service and encourage them to reach out again in the future.",
+				"maxTokens": 100,
+				"temperature": 0.7
+			},
+			"tools": ["hangup"],
+			"transitions": [
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "goodbye",
+					"priority": 0,
+					"description": "End call"
+				}
+			]
+		}
+	],
+	"validationRules": {
+		"require_health_id_for_pharmacy": true,
+		"require_health_id_for_appointments": true,
+		"max_session_duration": 3600,
+		"enable_chat_context": true
+	},
+	"metadata": {
+		"created_at": "2025-01-09",
+		"last_updated": "2025-01-09",
+		"owner": "healthcare_team",
+		"tags": ["healthcare", "multi-service", "production-ready"]
+	}
+}

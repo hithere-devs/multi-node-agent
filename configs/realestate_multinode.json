@@ -1,0 +1,485 @@
+{
+	"id": "realestate-multinode-001",
+	"name": "Real Estate Assistant Multi-Node Agent",
+	"version": "2.0",
+	"description": "Advanced multi-nodal real estate agent with multiple conversational paths. Users can navigate between Property Search, Viewing Scheduling, Financing Information, and Property Management services with full chat context preservation.",
+	"agentInstructions": "You are a professional real estate assistant. You help users with property searches, scheduling viewings, financing options, and property management. You are knowledgeable, trustworthy, and guide users through their real estate journey. Always provide accurate information and help clients make informed decisions. Keep responses concise and helpful.",
+	"domainContext": "Real estate services including property search, viewings, financing, and property management",
+	"entryNode": "welcome",
+	"globalTools": ["hangup", "transfer"],
+	"nodes": [
+		{
+			"id": "welcome",
+			"type": "entry",
+			"name": "Welcome & Service Selection",
+			"description": "Initial greeting and service selection node. Presents all available real estate services and guides users to appropriate department.",
+			"prompt": {
+				"template": "Welcome to our Real Estate Services! I'm here to help you with all your property needs.\n\nI can assist you with:\n1. **PROPERTY SEARCH** - Find homes, apartments, commercial spaces, check listings, compare properties\n2. **VIEWING SCHEDULING** - Schedule property tours, arrange viewings, manage appointments\n3. **FINANCING & MORTGAGES** - Get financing information, mortgage pre-approval, loan options\n4. **PROPERTY MANAGEMENT** - Tenant services, maintenance requests, lease management, rent payments\n\nUser request: {{user_input}}\n\nBased on your needs, let me connect you with the right service.",
+				"systemPrompt": "You are a professional real estate assistant. You are knowledgeable, trustworthy, and client-focused. Your goal is to understand the client's property needs and guide them to the appropriate service. Be warm, professional, and helpful.",
+				"maxTokens": 150,
+				"temperature": 0.6
+			},
+			"tools": ["get_client_id"],
+			"context": {
+				"user_input": "required"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "intent",
+						"description": "User wants to search for properties, find homes, or browse listings"
+					},
+					"targetNode": "property_search_service",
+					"priority": 10,
+					"metadata": {
+						"reasoning": "Intent-based routing for property search queries"
+					}
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(property|home|house|apartment|condo|search|find|looking.*for|buy|rent|lease)"
+					},
+					"targetNode": "property_search_service",
+					"priority": 9,
+					"description": "User wants to search for properties"
+				},
+				{
+					"condition": {
+						"type": "intent",
+						"description": "User wants to schedule property viewings or tours"
+					},
+					"targetNode": "viewing_service",
+					"priority": 10,
+					"metadata": {
+						"reasoning": "Intent-based routing for viewing requests"
+					}
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(viewing|tour|visit|see.*property|show.*me|schedule.*viewing|book.*tour)"
+					},
+					"targetNode": "viewing_service",
+					"priority": 9,
+					"description": "User wants to schedule property viewings"
+				},
+				{
+					"condition": {
+						"type": "intent",
+						"description": "User needs information about financing, mortgages, or loans"
+					},
+					"targetNode": "financing_service",
+					"priority": 10,
+					"metadata": {
+						"reasoning": "Intent-based routing for financial queries"
+					}
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(mortgage|loan|financing|finance|pre.*approval|credit|down.*payment|interest.*rate)"
+					},
+					"targetNode": "financing_service",
+					"priority": 9,
+					"description": "User wants financing information"
+				},
+				{
+					"condition": {
+						"type": "intent",
+						"description": "User needs help with property management, tenants, or maintenance"
+					},
+					"targetNode": "property_management_service",
+					"priority": 10,
+					"metadata": {
+						"reasoning": "Intent-based routing for property management"
+					}
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(tenant|maintenance|repair|lease|rent.*payment|property.*management|landlord)"
+					},
+					"targetNode": "property_management_service",
+					"priority": 9,
+					"description": "User wants property management services"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call|hang.*up|done|thank.*you)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "welcome",
+					"priority": 0,
+					"description": "Default fallback - repeat welcome"
+				}
+			]
+		},
+		{
+			"id": "property_search_service",
+			"type": "service",
+			"name": "Property Search Service",
+			"description": "Handles all property search inquiries including listings, availability, comparisons, and property details.",
+			"prompt": {
+				"template": "You are a property search specialist. You help clients with:\n- Searching for properties by location, type, price range\n- Viewing detailed property listings and specifications\n- Comparing multiple properties\n- Checking property availability and pricing\n- Providing neighborhood and area information\n- Filtering by amenities, bedrooms, and features\n\nClient ID: {{client_id or 'Not yet provided'}}\nClient Request: {{user_input}}\n\nHelp them find the perfect property that matches their needs and budget. Be knowledgeable about market conditions.",
+				"systemPrompt": "You are a knowledgeable property search specialist. Be helpful in finding properties that match client requirements. Provide accurate information about locations, pricing, and features. Help clients narrow down their search and make informed decisions. Be honest about property conditions and market trends.",
+				"maxTokens": 200,
+				"temperature": 0.5
+			},
+			"tools": [
+				"get_client_id",
+				"search_properties",
+				"get_property_details",
+				"check_property_availability",
+				"compare_properties",
+				"get_neighborhood_info",
+				"save_favorite_property"
+			],
+			"context": {
+				"client_id": "optional",
+				"property_type": "optional",
+				"location": "optional",
+				"budget": "optional"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(back|main.*menu|other.*service|switch|home|main)"
+					},
+					"targetNode": "welcome",
+					"priority": 10,
+					"description": "User wants to go back to main menu"
+				},
+				{
+					"condition": {
+						"type": "intent",
+						"description": "User wants to schedule a viewing or tour for a property"
+					},
+					"targetNode": "viewing_service",
+					"priority": 10,
+					"metadata": {
+						"reasoning": "Intent-based transition from search to viewing"
+					}
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(viewing|tour|visit|see.*property|schedule)"
+					},
+					"targetNode": "viewing_service",
+					"priority": 9,
+					"description": "User wants to switch to viewing"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(mortgage|loan|financing|finance)"
+					},
+					"targetNode": "financing_service",
+					"priority": 9,
+					"description": "User wants to switch to financing"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "property_search_service",
+					"priority": 0,
+					"description": "Continue in property search service"
+				}
+			]
+		},
+		{
+			"id": "viewing_service",
+			"type": "service",
+			"name": "Viewing Scheduling Service",
+			"description": "Handles property viewing appointments, tours, and scheduling.",
+			"prompt": {
+				"template": "You are a viewing coordinator specialist. You help clients with:\n- Scheduling property viewings and tours\n- Checking available viewing time slots\n- Rescheduling or canceling viewings\n- Arranging virtual tours\n- Coordinating with property agents\n- Providing viewing preparation tips\n- Managing multiple viewing appointments\n\nClient ID: {{client_id or 'Not yet provided'}}\nClient Request: {{user_input}}\n\nHelp them schedule convenient viewing times and prepare for property tours. Be organized and accommodating.",
+				"systemPrompt": "You are a professional viewing coordinator. Be organized and efficient in scheduling property tours. Provide clear information about viewing times and what to expect. Handle scheduling conflicts with flexibility. Ensure clients have all necessary information before their viewing.",
+				"maxTokens": 200,
+				"temperature": 0.5
+			},
+			"tools": [
+				"get_client_id",
+				"check_viewing_availability",
+				"schedule_viewing",
+				"reschedule_viewing",
+				"cancel_viewing",
+				"get_upcoming_viewings",
+				"arrange_virtual_tour",
+				"send_viewing_confirmation"
+			],
+			"context": {
+				"client_id": "optional",
+				"property_id": "optional",
+				"viewing_date": "optional",
+				"viewing_time": "optional"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(back|main.*menu|other.*service|switch|home|main)"
+					},
+					"targetNode": "welcome",
+					"priority": 10,
+					"description": "User wants to go back to main menu"
+				},
+				{
+					"condition": {
+						"type": "intent",
+						"description": "User wants to search for more properties or different listings"
+					},
+					"targetNode": "property_search_service",
+					"priority": 10,
+					"metadata": {
+						"reasoning": "Intent-based transition from viewing to search"
+					}
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(search|find|look.*for|other.*properties|more.*homes)"
+					},
+					"targetNode": "property_search_service",
+					"priority": 9,
+					"description": "User wants to switch to property search"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(mortgage|loan|financing|finance)"
+					},
+					"targetNode": "financing_service",
+					"priority": 9,
+					"description": "User wants to switch to financing"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "viewing_service",
+					"priority": 0,
+					"description": "Continue in viewing service"
+				}
+			]
+		},
+		{
+			"id": "financing_service",
+			"type": "service",
+			"name": "Financing & Mortgage Service",
+			"description": "Handles financing information, mortgage pre-approval, and loan options.",
+			"prompt": {
+				"template": "You are a financing and mortgage specialist. You help clients with:\n- Understanding mortgage options and rates\n- Pre-approval process guidance\n- Calculating affordability and down payments\n- Comparing loan programs (FHA, VA, conventional)\n- Credit requirements and improvement tips\n- First-time buyer programs\n- Refinancing options\n\nClient ID: {{client_id or 'Not yet provided'}}\nClient Request: {{user_input}}\n\nHelp them understand financing options and guide them through the mortgage process. Provide clear, accurate financial information.",
+				"systemPrompt": "You are a knowledgeable financing specialist. Be clear and accurate when discussing financial matters. Help clients understand their options without pressuring. Explain complex financial terms in simple language. Always recommend clients speak with licensed mortgage professionals for specific advice. Maintain confidentiality.",
+				"maxTokens": 200,
+				"temperature": 0.5
+			},
+			"tools": [
+				"get_client_id",
+				"calculate_affordability",
+				"get_mortgage_rates",
+				"check_preapproval_status",
+				"compare_loan_options",
+				"estimate_monthly_payment",
+				"get_down_payment_requirements",
+				"connect_to_lender"
+			],
+			"context": {
+				"client_id": "optional",
+				"property_price": "optional",
+				"down_payment": "optional",
+				"credit_score": "optional"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(back|main.*menu|other.*service|switch|home|main)"
+					},
+					"targetNode": "welcome",
+					"priority": 10,
+					"description": "User wants to go back to main menu"
+				},
+				{
+					"condition": {
+						"type": "intent",
+						"description": "User wants to search for properties within their budget"
+					},
+					"targetNode": "property_search_service",
+					"priority": 10,
+					"metadata": {
+						"reasoning": "Intent-based transition from financing to property search"
+					}
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(search|find|property|home|house)"
+					},
+					"targetNode": "property_search_service",
+					"priority": 9,
+					"description": "User wants to switch to property search"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(viewing|tour|visit|see.*property)"
+					},
+					"targetNode": "viewing_service",
+					"priority": 9,
+					"description": "User wants to switch to viewing"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "financing_service",
+					"priority": 0,
+					"description": "Continue in financing service"
+				}
+			]
+		},
+		{
+			"id": "property_management_service",
+			"type": "service",
+			"name": "Property Management Service",
+			"description": "Handles tenant services, maintenance requests, lease management, and rent payments.",
+			"prompt": {
+				"template": "You are a property management specialist. You help with:\n- Tenant inquiries and support\n- Maintenance request submission and tracking\n- Lease agreements and renewals\n- Rent payment processing and history\n- Move-in and move-out procedures\n- Property rules and regulations\n- Emergency maintenance coordination\n\nClient ID: {{client_id or 'Not yet provided'}}\nClient Request: {{user_input}}\n\nHelp them with property management needs efficiently. Ensure tenant satisfaction and property maintenance.",
+				"systemPrompt": "You are a professional property management specialist. Be responsive and solution-oriented when handling tenant concerns. Provide clear information about procedures and timelines. Handle maintenance issues promptly. Maintain positive tenant-landlord relationships while following policies.",
+				"maxTokens": 200,
+				"temperature": 0.5
+			},
+			"tools": [
+				"get_client_id",
+				"submit_maintenance_request",
+				"track_maintenance_status",
+				"view_lease_details",
+				"process_rent_payment",
+				"get_payment_history",
+				"request_lease_renewal",
+				"report_emergency"
+			],
+			"context": {
+				"client_id": "optional",
+				"property_id": "optional",
+				"lease_id": "optional"
+			},
+			"transitions": [
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(back|main.*menu|other.*service|switch|home|main)"
+					},
+					"targetNode": "welcome",
+					"priority": 10,
+					"description": "User wants to go back to main menu"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(search|find|property|new.*place|move)"
+					},
+					"targetNode": "property_search_service",
+					"priority": 9,
+					"description": "User wants to switch to property search"
+				},
+				{
+					"condition": {
+						"type": "regex",
+						"expression": "(?i)(bye|goodbye|hangup|end.*call)"
+					},
+					"targetNode": "goodbye",
+					"priority": 8,
+					"description": "User wants to end the call"
+				},
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "property_management_service",
+					"priority": 0,
+					"description": "Continue in property management service"
+				}
+			]
+		},
+		{
+			"id": "goodbye",
+			"type": "exit",
+			"name": "Goodbye Node",
+			"description": "Graceful call ending node with hangup tool execution.",
+			"prompt": {
+				"template": "Thank you for contacting our Real Estate Services! We appreciate your interest and hope we could help you with your property needs today. Whether you're buying, selling, or renting, we're here to help. Feel free to reach out anytime. Have a wonderful day! [HANGUP]",
+				"systemPrompt": "You are providing a warm, professional goodbye message. Thank the client for their interest and encourage them to reach out again in the future.",
+				"maxTokens": 100,
+				"temperature": 0.7
+			},
+			"tools": ["hangup"],
+			"transitions": [
+				{
+					"condition": {
+						"type": "always"
+					},
+					"targetNode": "goodbye",
+					"priority": 0,
+					"description": "End call"
+				}
+			]
+		}
+	],
+	"validationRules": {
+		"require_client_id_for_viewings": true,
+		"require_client_id_for_financing": true,
+		"max_session_duration": 3600,
+		"enable_chat_context": true
+	},
+	"metadata": {
+		"created_at": "2025-11-09",
+		"last_updated": "2025-11-09",
+		"owner": "realestate_team",
+		"tags": [
+			"real-estate",
+			"property-search",
+			"multi-service",
+			"production-ready"
+		]
+	}
+}
