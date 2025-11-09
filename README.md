@@ -1,74 +1,159 @@
-<a href="https://livekit.io/">
-  <img src="./.github/assets/livekit-mark.png" alt="LiveKit logo" width="100" height="100">
-</a>
+# Multi‑Prompt Agent (LiveKit, Python)
 
-# LiveKit Agents Starter - Python
-
-A complete starter project for building voice AI apps with
+Backend implementation of a dynamic, modular multi‑prompt agent using
 [LiveKit Agents for Python](https://github.com/livekit/agents) and
-[LiveKit Cloud](https://cloud.livekit.io/).
+[LiveKit Cloud](https://cloud.livekit.io/). This repo focuses on the
+multi‑prompt logic, dynamic configuration, and clean backend architecture.
 
-The starter project includes:
+What you’ll find here:
 
-- A simple voice AI assistant, ready for extension and customization
-- A voice AI pipeline with [models](https://docs.livekit.io/agents/models) from
-  OpenAI, Cartesia, and AssemblyAI served through LiveKit Cloud
-  - Easily integrate your preferred
-    [LLM](https://docs.livekit.io/agents/models/llm/),
-    [STT](https://docs.livekit.io/agents/models/stt/), and
-    [TTS](https://docs.livekit.io/agents/models/tts/) instead, or swap to a
-    realtime model like the
-    [OpenAI Realtime API](https://docs.livekit.io/agents/models/realtime/openai)
-- Eval suite based on the LiveKit Agents
-  [testing & evaluation framework](https://docs.livekit.io/agents/build/testing/)
-- [LiveKit Turn Detector](https://docs.livekit.io/agents/build/turns/turn-detector/)
-  for contextually-aware speaker detection, with multilingual support
-- [Background voice cancellation](https://docs.livekit.io/home/cloud/noise-cancellation/)
-- Integrated
-  [metrics and logging](https://docs.livekit.io/agents/build/metrics/)
-- A Dockerfile ready for
-  [production deployment](https://docs.livekit.io/agents/ops/deployment/)
+- Modular backend for multi‑prompt agents (no UI required)
+- JSON schemas and sample configs for multiple “customers”
+- Dynamic prompt routing and injection at runtime
+- Voice/console runtimes via LiveKit.
 
-This starter app is compatible with any
-[custom web/mobile frontend](https://docs.livekit.io/agents/start/frontend/) or
-[SIP-based telephony](https://docs.livekit.io/agents/start/telephony/).
+## Thought process and assumptions
 
-## Coding agents and MCP
+I tried three ways to build the multi‑prompt agent and kept the one that worked
+best overall:
 
-This project is designed to work with coding agents like
-[Cursor](https://www.cursor.com/) and
-[Claude Code](https://www.anthropic.com/claude-code).
+- LiveKit Workflows (chosen): Most predictable conversation flow with a good
+  balance of speed and reliability. The node + orchestrator model made it easy
+  to see what happens next and why. This is the default path in this repo.
 
-To get the most out of these tools, install the
-[LiveKit Docs MCP server](https://docs.livekit.io/mcp).
+- LangGraph: Very fast and the graph tools are great. In longer chats I saw the
+  flow get less consistent at times, which would need more guardrails to keep it
+  on track.
 
-For Cursor, use this link:
+- Custom Multi‑Node Router: Gives you the most control. It started out a bit
+  slower (latency) but I expect it to improve with production tuning (streaming,
+  caching, batching). It’s a strong option if you need custom behavior.
 
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-light.svg)](https://cursor.com/en-US/install-mcp?name=livekit-docs&config=eyJ1cmwiOiJodHRwczovL2RvY3MubGl2ZWtpdC5pby9tY3AifQ%3D%3D)
+A few simple assumptions behind the design:
 
-For Claude Code, run this command:
+- Each “step” is a node. We move between nodes based on easy‑to‑read rules
+  (checked in `utils/expr_evaluator.py`).
+- Prompts are filled with the current state right before we call the model
+  (`src/agents/prompt_renderer.py`).
+- You can run everything in text‑only console mode; voice is optional.
+- Adding a new customer should only require a new config file, not code changes.
+- Tools are referenced by name in the configs and implemented in code (see
+  `src/agents/builtin_tools.py`).
 
+This keeps the system easy to read, test, and extend while still letting you
+pick the orchestration style that fits your needs.
+
+## Assumptions Made
+
+- I had to build something like this for agents as discussed in the interview
+  ![Retell Conversation Flow Agent](image.png)
+
+- I had to just build the livekit version with workflows but also try something
+  else if possible
+- I did not need to put the hard configs like model type, voices and other basic
+  stuff in the config json for now, could be easily done later if required
+- The config schema design was completely for this conversational flow or multi
+  node /multi prompt agent.
+- This whole task is built upon livekit sdk starter which was allowed to use.
+  Could setup a custom one as well but didn't do cause wanted to finish this
+  asap and the feature was the core requirement not the codebase.
+
+## Architecture overview
+
+At a glance, the system supports three orchestration styles that all implement
+dynamic, multi‑prompt behavior:
+
+- Multi‑Node Router: `src/agents/multi_node_router.py` orchestrates node agents
+  with conditional transitions and tool calls.
+- Workflow Engine: `src/workflows/` defines node agents and an orchestrator for
+  branching, prompt switching, and stateful progression.
+- LangGraph Flows: `src/langgraph_flows/` builds a graph of nodes/transitions
+  with explicit schemas for inputs/outputs.
+
+Key components used by all modes:
+
+- LLM & TTS/STT integration: `src/agents/llm_provider.py`,
+  `src/agents/tts_service.py`
+- Prompt assembly: `src/agents/prompt_renderer.py`
+- State & transitions: `src/agents/state_machine.py`,
+  `src/utils/expr_evaluator.py`
+- Execution glue: `src/agents/node_executor.py`, `src/agents/tool_invoker.py`
+- Session & logging: `src/agents/session_manager.py`, `src/utils/logger.py`
+
+### Approaches tried and findings
+
+I implemented all three approaches to this assignment and compared them:
+
+- LiveKit Workflows (chosen)
+
+  - Best overall balance of performance and reliability
+  - Explicit node agents + orchestrator make conversation flows predictable
+  - Good development ergonomics and clear state/transition modeling
+  - Used as the primary implementation for the assignment
+
+- LangGraph Flows
+
+  - Strong raw performance and great graph tooling/visualization
+  - In practice, conversation flow reliability felt less consistent in my tests
+    (transitions/order could be harder to keep deterministic for longer dialogs)
+
+- Custom Multi‑Node Router
+  - Maximum flexibility with fully custom routing and tools
+  - Slightly higher latency out‑of‑the‑box; likely improves with production
+    tuning (streaming/chunking, caching, batching, concurrency)
+  - Promising path if you need fine‑grained control beyond the other two
+
+How multi‑prompt works here:
+
+1. A customer configuration declares prompts, tools, and transition conditions.
+2. Incoming input (voice or text) updates state and context.
+3. The router/graph selects the next prompt “node” based on conditions evaluated
+   by `expr_evaluator` and node‑level logic.
+4. Prompts are rendered with current state and injected context.
+5. The chosen model/tool executes; the result advances the state along a
+   configured edge.
+
+## JSON schemas and customer configs
+
+Schemas that define how configurations are structured live in `schemas/`:
+
+- `schemas/multinode_schema.json` – For the multi‑node router mode
+- `schemas/workflow_schema.json` – For the workflow engine mode
+- `schemas/langgraph_schema.json` – For LangGraph flows
+
+Sample customer configurations are included under `configs/`:
+
+- `configs/workflows/` – Complete workflow definitions per customer
+- `configs/langgraph/` – LangGraph flow definitions per customer
+- `configs/custom_nodes/` – Reusable node/prompt fragments
+
+Customers included: `ecommerce`, `healthcare`, `realestate`.
+
+Minimal conceptual shape (example only):
+
+```json
+{
+	"customer": "ecommerce",
+	"entry_node": "welcome",
+	"nodes": [
+		{
+			"id": "welcome",
+			"prompt": "You are a helpful shopping assistant...",
+			"tools": ["search_inventory"],
+			"transitions": [
+				{ "when": "intent == 'track_order'", "to": "order_status" },
+				{ "when": "intent == 'faq'", "to": "faq" }
+			]
+		}
+	]
+}
 ```
-claude mcp add --transport http livekit-docs https://docs.livekit.io/mcp
-```
 
-For Codex CLI, use this command to install the server:
+Create a new customer by copying one of the provided configs, changing the
+customer id, prompts, and transitions. Configs are validated against the schemas
+above.
 
-```
-codex mcp add --url https://docs.livekit.io/mcp livekit-docs
-```
-
-For Gemini CLI, use this command to install the server:
-
-```
-gemini mcp add --transport http livekit-docs https://docs.livekit.io/mcp
-```
-
-The project includes a complete [AGENTS.md](AGENTS.md) file for these
-assistants. You can modify this file your needs. To learn more about this file,
-see [https://agents.md](https://agents.md).
-
-## Dev Setup
+## Dev setup
 
 Clone the repository and install dependencies to a virtual environment:
 
@@ -85,7 +170,7 @@ required keys:
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
 
-You can load the LiveKit environment automatically using the
+You can optionally load the LiveKit environment using the
 [LiveKit CLI](https://docs.livekit.io/home/cli/cli-setup):
 
 ```bash
@@ -95,10 +180,9 @@ lk app env -w -d .env.local
 
 ## Run the agent
 
-### 🚀 Quick Start - Interactive CLI
+### 🚀 Quick start (interactive CLI)
 
-This project includes three different agent orchestration systems. Use the
-interactive CLI to easily select and run any agent:
+Use the interactive CLI to select orchestration style and customer config:
 
 ```console
 python run_agent.py
@@ -106,27 +190,29 @@ python run_agent.py
 
 The CLI will guide you through:
 
-1. **Select agent type**: Workflow, Multi-Node, or LangGraph
-2. **Choose configuration**: Pick from available configs in each category
-3. **Select mode**: Console (text) or Dev (voice with LiveKit)
+1. Select agent type: Workflow, Multi‑Node, or LangGraph
+2. Choose configuration: Pick a customer (ecommerce/healthcare/realestate)
+3. Select mode: Console (text) or Dev (voice with LiveKit)
 
-See [RUNNING_AGENTS.md](RUNNING_AGENTS.md) for detailed usage instructions.
+### Manual running
 
-### Manual Running
-
-Before your first run, you must download certain models such as
-[Silero VAD](https://docs.livekit.io/agents/build/turns/vad/) and the
-[LiveKit turn detector](https://docs.livekit.io/agents/build/turns/turn-detector/):
+Optionally pre-download runtime models (VAD, turn detector) for all modes:
 
 ```console
 uv run python src/agent.py download-files
+uv run python src/langgraph_agent.py download-files
+uv run python src/workflow_agent.py download-files
 ```
 
-Next, run this command to speak to your agent directly in your terminal:
+Then launch the interactive CLI:
 
 ```console
-uv run python src/agent.py console
+uv run python run_agent.py
 ```
+
+Follow the prompts to choose agent type (Workflow/Multi‑Node/LangGraph), a
+customer config (ecommerce/healthcare/realestate), and a mode (console or dev).
+The selected agent will start automatically.
 
 To run the agent for use with a frontend or telephony, use the `dev` command:
 
@@ -140,70 +226,18 @@ In production, use the `start` command:
 uv run python src/agent.py start
 ```
 
-## Frontend & Telephony
+## Extending
 
-Get started quickly with our pre-built frontend starter apps, or add telephony
-support:
+- Add a new customer: copy a config under `configs/` and adjust prompts, tools,
+  and transitions.
+- Add tools: implement functions and register them in
+  `src/agents/builtin_tools.py` (or a new module) and reference by name in
+  configs.
+- Add nodes: extend `src/workflows/node_agents.py` or LangGraph nodes under
+  `src/langgraph_flows/graph_nodes.py`.
 
-| Platform         | Link                                                                                                                | Description                                        |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| **Web**          | [`livekit-examples/agent-starter-react`](https://github.com/livekit-examples/agent-starter-react)                   | Web voice AI assistant with React & Next.js        |
-| **iOS/macOS**    | [`livekit-examples/agent-starter-swift`](https://github.com/livekit-examples/agent-starter-swift)                   | Native iOS, macOS, and visionOS voice AI assistant |
-| **Flutter**      | [`livekit-examples/agent-starter-flutter`](https://github.com/livekit-examples/agent-starter-flutter)               | Cross-platform voice AI assistant app              |
-| **React Native** | [`livekit-examples/voice-assistant-react-native`](https://github.com/livekit-examples/voice-assistant-react-native) | Native mobile app with React Native & Expo         |
-| **Android**      | [`livekit-examples/agent-starter-android`](https://github.com/livekit-examples/agent-starter-android)               | Native Android app with Kotlin & Jetpack Compose   |
-| **Web Embed**    | [`livekit-examples/agent-starter-embed`](https://github.com/livekit-examples/agent-starter-embed)                   | Voice AI widget for any website                    |
-| **Telephony**    | [📚 Documentation](https://docs.livekit.io/agents/start/telephony/)                                                 | Add inbound or outbound calling to your agent      |
+## Notes
 
-For advanced customization, see the
-[complete frontend guide](https://docs.livekit.io/agents/start/frontend/).
-
-## Tests and evals
-
-This project includes a complete suite of evals, based on the LiveKit Agents
-[testing & evaluation framework](https://docs.livekit.io/agents/build/testing/).
-To run them, use `pytest`.
-
-```console
-uv run pytest
-```
-
-## Using this template repo for your own project
-
-Once you've started your own project based on this repo, you should:
-
-1. **Check in your `uv.lock`**: This file is currently untracked for the
-   template, but you should commit it to your repository for reproducible builds
-   and proper configuration management. (The same applies to `livekit.toml`, if
-   you run your agents in LiveKit Cloud)
-
-2. **Remove the git tracking test**: Delete the "Check files not tracked in git"
-   step from `.github/workflows/tests.yml` since you'll now want this file to be
-   tracked. These are just there for development purposes in the template repo
-   itself.
-
-3. **Add your own repository secrets**: You must
-   [add secrets](https://docs.github.com/en/actions/how-tos/writing-workflows/choosing-what-your-workflow-does/using-secrets-in-github-actions)
-   for `LIVEKIT_URL`, `LIVEKIT_API_KEY`, and `LIVEKIT_API_SECRET` so that the
-   tests can run in CI.
-
-## Deploying to production
-
-This project is production-ready and includes a working `Dockerfile`. To deploy
-it to LiveKit Cloud or another environment, see the
-[deploying to production](https://docs.livekit.io/agents/ops/deployment/) guide.
-
-## Self-hosted LiveKit
-
-You can also self-host LiveKit instead of using LiveKit Cloud. See the
-[self-hosting](https://docs.livekit.io/home/self-hosting/) guide for more
-information. If you choose to self-host, you'll need to also use
-[model plugins](https://docs.livekit.io/agents/models/#plugins) instead of
-LiveKit Inference and will need to remove the
-[LiveKit Cloud noise cancellation](https://docs.livekit.io/home/cloud/noise-cancellation/)
-plugin.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
-for details.
+- Frontend is intentionally omitted per assignment; focus is backend logic.
+- You can integrate SIP/telephony or frontends later; the code is structured to
+  support it, but it’s not required here.
