@@ -7,32 +7,25 @@ logger = get_logger("builtin-tools")
 
 
 class BuiltinTool:
-    """Base class for built-in tools."""
+    """Base class for built-in tools that agents can invoke during conversations."""
 
     def __init__(self, name: str, description: str):
-        """Initialize built-in tool.
-
-        Args:
-            name: Tool name
-            description: Tool description
-        """
         self.name = name
         self.description = description
 
     async def execute(self, **kwargs) -> Dict[str, Any]:
-        """Execute the tool.
+        """Execute the tool with provided parameters.
 
         Returns:
-            Execution result
+            Dict containing execution results with 'success' flag
         """
         raise NotImplementedError
 
 
 class HangupTool(BuiltinTool):
-    """Tool to gracefully end a call."""
+    """Gracefully terminates the conversation session."""
 
     def __init__(self):
-        """Initialize hangup tool."""
         super().__init__(
             name="hangup",
             description="Gracefully end the call with a closing message and say goodbye",
@@ -60,10 +53,9 @@ class HangupTool(BuiltinTool):
 
 
 class TransferTool(BuiltinTool):
-    """Tool to transfer to another service or node."""
+    """Transfers conversation to a different service or department."""
 
     def __init__(self):
-        """Initialize transfer tool."""
         super().__init__(
             name="transfer",
             description="Transfer the conversation to a different service or department",
@@ -91,10 +83,9 @@ class TransferTool(BuiltinTool):
 
 
 class GetHealthIDTool(BuiltinTool):
-    """Tool to retrieve or validate health ID."""
+    """Retrieves or validates user health ID from system."""
 
     def __init__(self):
-        """Initialize health ID tool."""
         super().__init__(
             name="get_health_id",
             description="Retrieve or validate user's health ID",
@@ -103,17 +94,12 @@ class GetHealthIDTool(BuiltinTool):
     async def execute(
         self, user_identifier: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
-        """Execute health ID lookup.
+        """Look up health ID using phone number or email.
 
-        Args:
-            user_identifier: User's phone number or email
-
-        Returns:
-            Health ID or validation result
+        Note: This is a mock implementation - production would query a real database.
         """
         logger.info("health_id_lookup", user_identifier=user_identifier)
 
-        # Mock implementation - in production, this would query a database
         health_id = f"HID-{user_identifier[-4:]}" if user_identifier else "HID-0000"
 
         return {

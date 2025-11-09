@@ -26,14 +26,6 @@ class BaseNodeAgent(Agent):
         workflow_state: Dict[str, Any],
         chat_ctx: Optional[ChatContext] = None,
     ):
-        """Initialize a node agent.
-
-        Args:
-            node_config: Configuration for this node
-            workflow_state: Shared state across the workflow
-            chat_ctx: Optional chat context to preserve conversation history
-        """
-        # Build instructions from prompt config
         instructions = (
             f"{node_config.prompt.system_prompt}\n\n{node_config.prompt.instructions}"
         )
@@ -60,7 +52,9 @@ class BaseNodeAgent(Agent):
             self.workflow_state["visited_nodes"] = []
         self.workflow_state["visited_nodes"].append(self.node_config.id)
 
-        # Generate initial greeting/response
+        # Always generate appropriate response based on node type
+        # For initial entry, the agent will naturally greet based on instructions
+        # For transitions, the agent will respond appropriately to the new context
         await self._on_node_enter()
 
     async def _on_node_enter(self) -> None:
@@ -70,15 +64,7 @@ class BaseNodeAgent(Agent):
     def _evaluate_transition(
         self, condition: TransitionCondition, context: Dict[str, Any]
     ) -> bool:
-        """Evaluate if a transition condition is met.
-
-        Args:
-            condition: The transition condition to evaluate
-            context: Current context including user input, tool results, etc.
-
-        Returns:
-            True if condition is met, False otherwise
-        """
+        """Evaluates if a transition condition is met."""
         if condition.type == TransitionConditionType.ALWAYS:
             return True
 
@@ -91,8 +77,6 @@ class BaseNodeAgent(Agent):
                 )
 
         elif condition.type == TransitionConditionType.INTENT:
-            # Intent matching would be handled by LLM tools
-            # This is a placeholder for tool-based intent detection
             return context.get("detected_intent") == condition.intent_description
 
         elif condition.type == TransitionConditionType.TOOL_RESULT:
@@ -104,7 +88,6 @@ class BaseNodeAgent(Agent):
                 return bool(result)
 
         elif condition.type == TransitionConditionType.EXPRESSION:
-            # Evaluate Python expression with context
             if condition.expression:
                 try:
                     return bool(
@@ -117,14 +100,7 @@ class BaseNodeAgent(Agent):
         return False
 
     def _get_next_node_id(self, context: Dict[str, Any]) -> Optional[str]:
-        """Determine the next node based on transitions.
-
-        Args:
-            context: Current context for evaluation
-
-        Returns:
-            Node ID to transition to, or None if no transition matches
-        """
+        """Determines the next node based on transitions."""
         # Sort by priority (highest first)
         sorted_transitions = sorted(
             self.node_config.transitions,
@@ -145,39 +121,31 @@ class BaseNodeAgent(Agent):
         return None
 
     def _create_transition_tool(self, node_id: str, tool_name: str, description: str):
-        """Create a tool for explicit transitions."""
+        """Creates a tool for explicit transitions."""
 
         @function_tool(name=tool_name, description=description)
         async def transition_tool(context: RunContext):
             """Tool to transition to a specific node."""
             self._transition_requested = node_id
-            # Import here to avoid circular dependency
-            from .orchestrator import get_node_agent
+            from .orchestrator import get_current_orchestrator
 
-            next_agent = get_node_agent(
-                node_id,
-                self.workflow_state,
-                chat_ctx=(
-                    self.chat_ctx if self.node_config.preserve_chat_context else None
-                ),
-            )
-            return next_agent, f"Transitioning to {node_id}"
+            orchestrator = get_current_orchestrator()
+            if orchestrator:
+                orchestrator.workflow_state["pending_transition"] = node_id
+            return f"Transitioning to {node_id}"
 
         return transition_tool
 
 
 class WelcomeNodeAgent(BaseNodeAgent):
-    """Agent for welcome/entry nodes."""
 
-    def __init__(
-        self,
-        node_config: NodeConfig,
-        workflow_state: Dict[str, Any],
-        chat_ctx: Optional[ChatContext] = None,
+
+class WelcomeNodeAgent(BaseNodeAgent):
+    """Welcome/entry node agent."""
+
     ):
         super().__init__(node_config, workflow_state, chat_ctx)
 
-        # Add transition tools based on configured transitions
         for transition in node_config.transitions:
             if transition.condition.type == TransitionConditionType.INTENT:
                 tool_name = f"go_to_{transition.target_node_id}"
@@ -188,31 +156,30 @@ class WelcomeNodeAgent(BaseNodeAgent):
                 tool = self._create_transition_tool(
                     transition.target_node_id, tool_name, description
                 )
-                # Register the tool dynamically
                 setattr(self, tool_name, tool)
 
     async def _on_node_enter(self) -> None:
-        """Welcome node greeting."""
+        """Greets user on welcome node entry."""
         await self.session.generate_reply(
             instructions="Greet the user warmly and present the available options clearly."
         )
 
 
 class ConversationalNodeAgent(BaseNodeAgent):
-    """Agent for conversational nodes with extended interactions."""
+    """Agent for conversational nodes."""
 
     async def _on_node_enter(self) -> None:
-        """Start conversation."""
+        """Starts conversation."""
         await self.session.generate_reply(
             instructions=self.node_config.prompt.instructions
         )
 
 
 class TransitionNodeAgent(BaseNodeAgent):
-    """Agent for quick transition nodes (routing/decision points)."""
+    """Agent for routing/decision nodes."""
 
     async def _on_node_enter(self) -> None:
-        """Immediately evaluate and transition."""
+        """Evaluates and transitions immediately."""
         context = {
             "workflow_state": self.workflow_state,
             "session_data": self.workflow_state.get("session_data", {}),
@@ -221,7 +188,6 @@ class TransitionNodeAgent(BaseNodeAgent):
         next_node = self._get_next_node_id(context)
 
         if next_node:
-            # Import here to avoid circular dependency
             from .orchestrator import get_node_agent
 
             next_agent = get_node_agent(
@@ -232,12 +198,10 @@ class TransitionNodeAgent(BaseNodeAgent):
                 ),
             )
 
-            # Quick acknowledgment before transition
             await self.session.generate_reply(
                 instructions=f"Briefly acknowledge and transition to next step."
             )
 
-            # Update session with new agent
             self.session.update_agent(next_agent)
         else:
             logger.warning("no_transition_found", node_id=self.node_config.id)
@@ -257,19 +221,14 @@ class ToolNodeAgent(BaseNodeAgent):
     ):
         super().__init__(node_config, workflow_state, chat_ctx)
 
-        # Add tools specified in config
-        # Tools would be registered from a tool registry
-        # For now, we'll add transition tools
         for transition in node_config.transitions:
             if transition.condition.type == TransitionConditionType.TOOL_RESULT:
-                # Create tool that triggers transition on specific result
                 tool_name = transition.condition.tool_name
                 if tool_name:
-                    # Tool would be loaded from registry here
                     pass
 
     async def _on_node_enter(self) -> None:
-        """Introduce available tools."""
+        """Introduces available tools."""
         await self.session.generate_reply(
             instructions="Explain available actions and ask what the user needs."
         )
@@ -279,26 +238,21 @@ class HangupNodeAgent(BaseNodeAgent):
     """Agent for conversation termination."""
 
     async def _on_node_enter(self) -> None:
-        """Farewell message and end session."""
+        """Farewell message and ends session."""
         await self.session.generate_reply(
             instructions="Provide a warm, professional farewell message."
         )
 
-        # Mark workflow as complete
         self.workflow_state["is_complete"] = True
 
-        # End the call/session
         job_ctx = get_job_context()
-        # Give time for the message to be delivered
         import asyncio
 
         await asyncio.sleep(2)
 
-        # Disconnect
         await job_ctx.room.disconnect()
 
 
-# Node type to agent class mapping
 NODE_AGENT_CLASSES = {
     NodeType.WELCOME: WelcomeNodeAgent,
     NodeType.CONVERSATIONAL: ConversationalNodeAgent,

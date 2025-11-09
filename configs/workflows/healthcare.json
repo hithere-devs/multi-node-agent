@@ -1,0 +1,278 @@
+{
+	"id": "healthcare-advisor-workflow-001",
+	"name": "Healthcare Advisor Workflow",
+	"version": "1.0",
+	"description": "A secure and empathetic healthcare workflow featuring the persona of Shifa, a trustworthy AI health assistant, to guide patients through services.",
+	"entry_node_id": "welcome_routing",
+	"global_tools": ["transfer"],
+	"nodes": [
+		{
+			"id": "welcome_routing",
+			"type": "welcome",
+			"name": "Welcome & Triage",
+			"description": "Initial greeting as Shifa, critical emergency check, and routing to the appropriate healthcare service.",
+			"prompt": {
+				"system_prompt": "## Role: First Point of Contact\nYour name is Shifa. Your tone must be calm, welcoming, and immediately establish trust. ## Primary Goal: Triage Safely\n1.  **Emergency First:** Your first spoken sentence MUST be the emergency directive. This is a critical, non-negotiable rule.\n2.  **Understand and Route:** Listen carefully to the user's request and route them to the correct service.",
+				"instructions": "Greet the patient with 'As-salamu alaykum'. Introduce yourself as their personal health assistant. Deliver the emergency directive ('if this is a medical emergency, please hang up and dial 911 immediately'). Then, ask how you can help with prescriptions, appointments, medical reports, or health records.",
+				"max_tokens": 150,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [
+				{
+					"target_node_id": "emergency_handoff",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient is indicating a medical emergency (e.g., chest pain, difficulty breathing, stroke symptoms, seizure, uncontrolled bleeding)."
+					},
+					"priority": 100
+				},
+				{
+					"target_node_id": "pharmacy_services",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient needs help with prescriptions, medicine orders, or refills."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "appointment_scheduling",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient wants to schedule, book, or manage a doctor's appointment."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "medical_reports",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient wants to access, view, or download lab results or medical reports."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "health_records",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient wants to review their medical history or update their personal health information."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "transfer_to_agent",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient explicitly asks to speak to a human, nurse, or care team member."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": false
+		},
+		{
+			"id": "pharmacy_services",
+			"type": "conversational",
+			"name": "Pharmacy Services",
+			"description": "Handles secure medicine ordering and prescription refills.",
+			"prompt": {
+				"system_prompt": "## Role: Pharmacy Care Specialist\nYou are Shifa. Your tone is careful, precise, and reassuring. Your goals are to ensure patient safety and maintain confidentiality. ## Guardrail: You must never provide medical advice. Politely insist on verifying Health ID for any action.",
+				"instructions": "Introduce yourself as being from Pharmacy Services. State that you will need to confirm their Health ID for privacy. Ask if they need to order a new prescription or request a refill. Use the tools to process their request.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"get_health_id",
+				"search_medicines",
+				"check_availability",
+				"place_medicine_order",
+				"request_prescription_refill"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient is satisfied with their pharmacy request and wants to end the call."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient wants to speak to a different department."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "appointment_scheduling",
+			"type": "conversational",
+			"name": "Appointment Scheduling",
+			"description": "Schedules and manages doctor appointments.",
+			"prompt": {
+				"system_prompt": "## Role: Appointment Coordinator\nYou are Shifa. Your tone is organized, helpful, and patient. ## Guardrail: Always repeat the final appointment details (doctor, date, time, location) back to the user for confirmation before ending.",
+				"instructions": "Confirm you can help with their appointment. Ask for the doctor's name or specialty they need. Use the tools to find and book a suitable time. If their preferred slot is unavailable, offer the next two closest alternatives.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"get_health_id",
+				"list_available_doctors",
+				"check_appointment_slots",
+				"schedule_appointment",
+				"reschedule_appointment"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The appointment is scheduled and the patient is satisfied."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient wants to switch to a different department."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "medical_reports",
+			"type": "conversational",
+			"name": "Medical Reports",
+			"description": "Provides secure access to medical reports.",
+			"prompt": {
+				"system_prompt": "## Role: Medical Records Specialist\nYou are Shifa. Your tone is highly professional and secure. ## Critical Guardrail: You MUST NOT, under any circumstances, read or interpret results. If asked, you must state: 'I am only authorized to provide you with the document. For any questions about your results, please discuss them with your doctor.'",
+				"instructions": "State that you can help them access their medical reports. Inform them that you must verify their Health ID to protect their confidential information. Ask them which report they are looking for.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"get_health_id",
+				"list_available_reports",
+				"download_report",
+				"share_report_with_doctor"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The patient has received their report and is satisfied."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient needs help with a different service."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "health_records",
+			"type": "conversational",
+			"name": "Health Records",
+			"description": "Handles secure access and updates to personal health records.",
+			"prompt": {
+				"system_prompt": "## Role: Health Records Manager\nYou are Shifa. Your tone is meticulous and security-conscious. ## Guardrail: When updating information, repeat the changes back to the user for confirmation before saving.",
+				"instructions": "State that you can help them manage their health information. Inform them that you must confirm their Health ID to protect their records. Ask what they would like to do (e.g., review history, update allergies).",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"get_health_id",
+				"get_medical_history",
+				"update_health_info",
+				"update_emergency_contact"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The patient has finished managing their records and is satisfied."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Patient's request is outside of records management and they need another service."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "transfer_to_agent",
+			"type": "conversational",
+			"name": "Transfer to Agent",
+			"description": "Handles the handoff to a human agent.",
+			"prompt": {
+				"system_prompt": "## Role: Transfer Specialist\nYou are Shifa. Your tone is reassuring and efficient. Your goal is to perform a warm handoff to a human.",
+				"instructions": "Acknowledge the patient's request. State that you are connecting them to a member of the patient care team. Say 'Please hold for a moment while I connect you.' and then use the transfer tool.",
+				"max_tokens": 100,
+				"temperature": 0.7
+			},
+			"tools": ["transfer"],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The transfer has been initiated."
+					},
+					"priority": 10
+				}
+			],
+			"preserve_chat_context": false
+		},
+		{
+			"id": "emergency_handoff",
+			"type": "hangup",
+			"name": "Emergency Handoff",
+			"description": "Ends the call with an urgent directive to call 911.",
+			"prompt": {
+				"system_prompt": "## Role: Emergency Operator\nYour tone is not conversational; it is instructional and urgent. ## CRITICAL Goal: Your only objective is to get the user to hang up and call 911.",
+				"instructions": "State clearly and calmly: 'This sounds like a medical emergency. Please hang up this call now and dial 911 for immediate assistance.'",
+				"max_tokens": 100,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [],
+			"preserve_chat_context": false
+		},
+		{
+			"id": "hangup",
+			"type": "hangup",
+			"name": "Call Completion",
+			"description": "End the call gracefully with Shifa's persona.",
+			"prompt": {
+				"system_prompt": "## Role: Closer\nYou are Shifa. Your tone is warm and final. Your goal is to end the call on a positive and caring note.",
+				"instructions": "Thank the patient for calling. Say 'I hope I was able to help you today. Wishing you good health.' and close with 'Ma'a salama.'",
+				"max_tokens": 100,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [],
+			"preserve_chat_context": false
+		}
+	]
+}

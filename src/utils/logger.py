@@ -38,7 +38,6 @@ def configure_logging(
         format="%(message)s",
     )
 
-    # Configure structlog
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,

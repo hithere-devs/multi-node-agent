@@ -11,7 +11,7 @@ logger = get_logger(__name__)
 
 
 class ConfigStore:
-    """Loads and manages customer configurations."""
+    """Manages loading and saving of agent configurations from JSON files."""
 
     @staticmethod
     async def load_from_file(file_path: str) -> CustomerConfig:

@@ -10,7 +10,6 @@ class ExpressionEvaluator:
     """Evaluates conditions for state transitions."""
 
     def __init__(self) -> None:
-        """Initialize the expression evaluator."""
         pass
 
     def evaluate(

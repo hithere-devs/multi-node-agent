@@ -13,7 +13,7 @@ logger = get_logger("node-executor")
 
 
 class NodeExecutor:
-    """Executes individual node logic in multi-nodal flows."""
+    """Executes individual node logic in multi-nodal workflows."""
 
     def __init__(self, llm_provider: LLMProvider):
         """Initialize executor with LLM provider.
@@ -82,11 +82,9 @@ class NodeExecutor:
                 "metadata": node.metadata or {},
             }
 
-            # Add tool result if any tool was executed
             if tool_result:
                 result["tool_result"] = tool_result
 
-            # Record in history
             self.execution_history.append(result)
 
             logger.info(
@@ -123,7 +121,6 @@ class NodeExecutor:
             Generated response text
         """
         try:
-            # Call LLM provider using standard interface
             result = await self.llm_provider.call(
                 prompt=prompt,
                 system_prompt=system_prompt,
@@ -200,11 +197,9 @@ class NodeExecutor:
                 raise ValueError(f"Required context field missing: {field_name}")
 
     def get_execution_history(self) -> list:
-        """Get execution history for current session."""
         return self.execution_history
 
     def clear_execution_history(self) -> None:
-        """Clear execution history."""
         self.execution_history = []
 
     def get_node_context_requirements(self, node: MultiNodeConfig) -> Dict[str, str]:

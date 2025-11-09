@@ -12,11 +12,7 @@ logger = get_logger(__name__)
 
 
 class SessionManager:
-    """
-    Manages agent sessions and coordinates state machine execution.
-
-    Handles session lifecycle, context tracking, and communication with LiveKit.
-    """
+    """Manages agent sessions and coordinates state machine execution."""
 
     def __init__(
         self,
@@ -26,23 +22,12 @@ class SessionManager:
         participant_id: str,
         agent_id: str = "default-agent",
     ) -> None:
-        """
-        Initialize session manager.
-
-        Args:
-            customer_config: Customer configuration
-            state_machine: State machine engine
-            room_name: LiveKit room name
-            participant_id: Participant ID in the room
-            agent_id: Agent identifier
-        """
         self.customer_config = customer_config
         self.state_machine = state_machine
         self.room_name = room_name
         self.participant_id = participant_id
         self.agent_id = agent_id
 
-        # Create session context
         entry_state = state_machine.get_entry_state()
         self.session_context = SessionContext(
             session_id=str(uuid.uuid4()),
@@ -98,11 +83,10 @@ class SessionManager:
             raise
 
     def get_session_context(self) -> SessionContext:
-        """Get the current session context."""
         return self.session_context
 
     def get_session_info(self) -> Dict[str, Any]:
-        """Get session information."""
+        """Returns session metadata and current state information."""
         elapsed = time.time() - self.created_at
         return {
             "session_id": self.session_context.session_id,
@@ -118,15 +102,13 @@ class SessionManager:
         }
 
     def set_variable(self, key: str, value: Any) -> None:
-        """Set a session variable."""
         self.session_context.set_variable(key, value)
 
     def get_variable(self, key: str, default: Any = None) -> Any:
-        """Get a session variable."""
         return self.session_context.get_variable(key, default)
 
     async def close(self) -> None:
-        """Close the session."""
+        """Closes the session and logs summary."""
         self.is_active = False
         elapsed = time.time() - self.created_at
 
@@ -167,17 +149,16 @@ class SessionRegistry:
         return session_id
 
     def get_session(self, session_id: str) -> Optional[SessionManager]:
-        """Get session by ID."""
         return self.sessions.get(session_id)
 
     def remove_session(self, session_id: str) -> None:
-        """Remove session from registry."""
+        """Removes session from registry."""
         if session_id in self.sessions:
             del self.sessions[session_id]
             logger.info("session_removed", session_id=session_id)
 
     async def cleanup_expired_sessions(self) -> None:
-        """Clean up expired sessions based on TTL."""
+        """Cleans up expired sessions based on TTL."""
         current_time = time.time()
         expired_sessions = []
 
@@ -193,7 +174,7 @@ class SessionRegistry:
             logger.info("session_expired", session_id=session_id)
 
     async def close_all(self) -> None:
-        """Close all active sessions."""
+        """Closes all active sessions."""
         for session in list(self.sessions.values()):
             await session.close()
         self.sessions.clear()

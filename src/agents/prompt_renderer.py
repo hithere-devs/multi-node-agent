@@ -22,7 +22,6 @@ class PromptRenderer:
     """Renders prompts with variable injection using Jinja2 templates."""
 
     def __init__(self) -> None:
-        """Initialize the prompt renderer."""
         self.env = Environment(undefined=SilentUndefined)
 
     async def render(self, template_str: str, variables: Dict[str, Any]) -> str:
@@ -43,7 +42,6 @@ class PromptRenderer:
             template = self.env.from_string(template_str)
             return template.render(variables)
         except Exception as e:
-            # Fallback: log error and return original template
             raise ValueError(f"Failed to render template: {e}") from e
 
     async def render_dict(

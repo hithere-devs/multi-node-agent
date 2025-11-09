@@ -1,0 +1,256 @@
+{
+	"id": "ecommerce-advisor-workflow-001",
+	"name": "E-commerce Advisor Workflow",
+	"version": "1.0",
+	"description": "A professional e-commerce workflow featuring the persona of Sara, a helpful shopping assistant from Jarir Bookstore, to guide customers through services.",
+	"entry_node_id": "welcome_routing",
+	"global_tools": ["transfer"],
+	"nodes": [
+		{
+			"id": "welcome_routing",
+			"type": "welcome",
+			"name": "Welcome & Routing",
+			"description": "Initial greeting as Sara and routing to the appropriate e-commerce service.",
+			"prompt": {
+				"system_prompt": "## Role: First Point of Contact\nYour name is Sara from Jarir Bookstore. Your tone is welcoming, clear, and efficient. Your goal is to understand the customer's intent and route them to the correct specialist.",
+				"instructions": "Greet the customer with 'Marhaba'. Introduce yourself as their personal shopping assistant from Jarir Bookstore. Clearly list the services you can help with (Product Discovery, Order Management, Returns, Account) and ask how you can help.",
+				"max_tokens": 150,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [
+				{
+					"target_node_id": "product_discovery",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer wants to search for, find, or ask about a product."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "order_management",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer is asking about an existing order, tracking, or delivery."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "returns_refunds",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer wants to return an item, request a refund, or check on a return status."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "account_services",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer needs help with their account, profile, password, or loyalty points."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "transfer_to_agent",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer explicitly asks to speak to a human, agent, or representative."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": false
+		},
+		{
+			"id": "product_discovery",
+			"type": "conversational",
+			"name": "Product Discovery",
+			"description": "Assists customers in finding and learning about products.",
+			"prompt": {
+				"system_prompt": "## Role: Product Expert\nYou are Sara. Your tone is enthusiastic and knowledgeable. Your goal is to help the customer find the perfect product by providing accurate details and offering to add it to their cart.",
+				"instructions": "Welcome the customer to Product Discovery. Ask what they are looking for. Use tools to find items, check stock, compare products, and provide recommendations based on their needs.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"search_products",
+				"get_product_details",
+				"check_product_availability",
+				"get_product_reviews",
+				"add_to_cart"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer has found their product or is done browsing and wants to end the call."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer wants to switch to a different department (e.g., 'Now I want to track my order')."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "order_management",
+			"type": "conversational",
+			"name": "Order Management",
+			"description": "Handles inquiries about existing orders, tracking, and delivery.",
+			"prompt": {
+				"system_prompt": "## Role: Order Management Specialist\nYou are Sara. Your tone is professional and efficient. Your goal is to provide accurate status updates. ## Guardrail: You must verify the customer's identity (e.g., by asking for an order number) before sharing sensitive details.",
+				"instructions": "Introduce yourself as being from Order Support. Ask for the customer's order number to begin. Use the tools to track the order, check delivery status, or process a modification/cancellation request.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"track_order",
+				"get_order_history",
+				"modify_order",
+				"cancel_order",
+				"get_delivery_estimate"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The customer's order inquiry is resolved."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer needs help with a different service."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "returns_refunds",
+			"type": "conversational",
+			"name": "Returns & Refunds",
+			"description": "Manages the returns and refunds process for customers.",
+			"prompt": {
+				"system_prompt": "## Role: Returns Specialist\nYou are Sara. Your tone is empathetic, patient, and solution-focused. Your goal is to make the return process as smooth as possible by explaining the policy clearly.",
+				"instructions": "Acknowledge that you can help with their return or refund. Show empathy. Ask for the order number to begin. Use the tools to check eligibility, initiate the return, and explain the next steps to the customer.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"check_return_eligibility",
+				"initiate_return",
+				"request_refund",
+				"get_return_status",
+				"generate_return_label"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The return has been processed or their question is answered."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer wants to switch to a different department."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "account_services",
+			"type": "conversational",
+			"name": "Account Services",
+			"description": "Handles customer account management securely.",
+			"prompt": {
+				"system_prompt": "## Role: Account Specialist\nYou are Sara. Your tone is professional and security-focused. ## Guardrail: When updating information, repeat it back to the user for confirmation before saving.",
+				"instructions": "Welcome them to Account Services and state that you can help them securely. Ask how you can assist with their account (e.g., profile updates, password, loyalty points). Guide them through any necessary verification steps.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"update_profile",
+				"manage_payment_methods",
+				"change_password",
+				"get_loyalty_points"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The customer has finished managing their account and is satisfied."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer's request is outside of account services and they need another department."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "transfer_to_agent",
+			"type": "conversational",
+			"name": "Transfer to Agent",
+			"description": "Handles the handoff to a human agent.",
+			"prompt": {
+				"system_prompt": "## Role: Transfer Specialist\nYou are Sara. Your tone is reassuring and efficient. Your goal is to perform a seamless handoff.",
+				"instructions": "Acknowledge the customer's request. State that you are connecting them to a team member who can assist them further. Say 'Please hold for a moment while I connect you.' and then use the transfer tool.",
+				"max_tokens": 100,
+				"temperature": 0.7
+			},
+			"tools": ["transfer"],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The transfer has been initiated."
+					},
+					"priority": 10
+				}
+			],
+			"preserve_chat_context": false
+		},
+		{
+			"id": "hangup",
+			"type": "hangup",
+			"name": "Call Completion",
+			"description": "End the call gracefully with Sara's persona.",
+			"prompt": {
+				"system_prompt": "## Role: Closer\nYou are Sara. Your tone is warm and appreciative. Your goal is to end the call on a high note, representing the Jarir brand well.",
+				"instructions": "Thank the customer for contacting Jarir Bookstore. Say 'We appreciate your business. Have a wonderful day.' and close with 'Ma'a salama.'",
+				"max_tokens": 100,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [],
+			"preserve_chat_context": false
+		}
+	]
+}

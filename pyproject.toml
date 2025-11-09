@@ -18,6 +18,10 @@ dependencies = [
     "structlog>=23.0",
     "python-json-logger>=2.0",
     "aioredis>=2.0",
+    "langgraph>=0.6.11",
+    "langchain-core>=0.3.79",
+    "nest-asyncio>=1.6.0",
+    "inquirerpy>=0.3.4",
 ]
 
 [dependency-groups]

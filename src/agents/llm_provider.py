@@ -15,7 +15,7 @@ class ToolCall(ABC):
 
 
 class LLMProvider(ABC):
-    """Abstract base class for LLM providers."""
+    """Base interface for LLM integrations."""
 
     @abstractmethod
     async def call(
@@ -47,7 +47,7 @@ class LLMProvider(ABC):
 
 
 class OpenAIProvider(LLMProvider):
-    """OpenAI LLM provider."""
+    """OpenAI/compatible API implementation."""
 
     def __init__(
         self,
@@ -83,7 +83,6 @@ class OpenAIProvider(LLMProvider):
         temperature: float = 0.7,
         tools: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        """Call OpenAI API."""
         messages = []
 
         if system_prompt:
@@ -143,10 +142,9 @@ class OpenAIProvider(LLMProvider):
 
 
 class MockLLMProvider(LLMProvider):
-    """Mock LLM provider for testing."""
+    """Mock provider for testing without API calls."""
 
     def __init__(self, response_text: str = "Mock response"):
-        """Initialize mock provider."""
         self.response_text = response_text
         self.call_count = 0
 
@@ -158,7 +156,6 @@ class MockLLMProvider(LLMProvider):
         temperature: float = 0.7,
         tools: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
-        """Return mock response."""
         self.call_count += 1
         return {
             "text": self.response_text,

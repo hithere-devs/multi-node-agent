@@ -14,12 +14,7 @@ logger = get_logger(__name__)
 
 
 class LiveKitConnector:
-    """
-    Integrates the multi-prompt agent system with LiveKit.
-
-    Bridges between LiveKit events (participant joined, audio transcription, etc.)
-    and the state machine engine.
-    """
+    """Bridges multi-prompt agent system with LiveKit voice infrastructure."""
 
     def __init__(
         self,
@@ -94,11 +89,11 @@ class LiveKitConnector:
         return session
 
     def get_session(self, session_id: str) -> Optional[SessionManager]:
-        """Get a session by ID."""
+        """Retrieves session by ID."""
         return self.session_registry.get_session(session_id)
 
     async def close_session(self, session_id: str) -> None:
-        """Close and cleanup a session."""
+        """Closes and cleans up a session."""
         session = self.session_registry.get_session(session_id)
         if session:
             await session.close()
@@ -106,7 +101,7 @@ class LiveKitConnector:
             logger.info("session_closed_and_removed", session_id=session_id)
 
     async def cleanup(self) -> None:
-        """Cleanup all sessions and resources."""
+        """Cleanup all resources and active sessions."""
         await self.session_registry.close_all()
         await self.tool_invoker.close()
         logger.info("livekit_connector_cleanup_completed")

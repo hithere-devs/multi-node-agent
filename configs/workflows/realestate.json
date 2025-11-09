@@ -1,0 +1,265 @@
+{
+	"id": "real-estate-advisor-workflow-001",
+	"name": "Real Estate Advisor Workflow",
+	"version": "1.0",
+	"description": "A sophisticated real estate workflow featuring the persona of Amina, a trustworthy property advisor, to guide clients through property services.",
+	"entry_node_id": "welcome_routing",
+	"global_tools": ["transfer"],
+	"nodes": [
+		{
+			"id": "welcome_routing",
+			"type": "welcome",
+			"name": "Welcome & Routing",
+			"description": "Initial greeting as Amina and routing to the appropriate real estate service.",
+			"prompt": {
+				"system_prompt": "## Role: First Point of Contact\nYour name is Amina, a premier property advisor. Your tone is professional, welcoming, and confident. Your goal is to establish credibility and route the client to the correct service.",
+				"instructions": "Greet the client with 'Marhaba'. Introduce yourself as their personal property advisor. Clearly list the services you can help with (finding a property, scheduling a viewing, financing options, property management) and ask how you may assist them.",
+				"max_tokens": 150,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [
+				{
+					"target_node_id": "property_search",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client wants to search for, find, buy, or rent a property (e.g., house, villa, apartment)."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "viewing_scheduling",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client wants to schedule, book, or arrange a viewing or tour of a property."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "financing_info",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client is asking about financing, mortgages, payment plans, or loans."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "property_management",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client is a tenant or landlord asking about maintenance, rent, or lease management."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "transfer_to_consultant",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client explicitly asks to speak to a human, agent, or consultant."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": false
+		},
+		{
+			"id": "property_search",
+			"type": "conversational",
+			"name": "Property Search",
+			"description": "Assists clients in finding properties that match their needs.",
+			"prompt": {
+				"system_prompt": "## Role: Property Search Specialist\nYou are Amina. Your tone is consultative and knowledgeable. Your goal is to understand the client's needs and provide tailored listings. ## Guardrail: If a search yields no results, suggest broadening the criteria slightly.",
+				"instructions": "Welcome the client to the property search service. Ask targeted questions to understand their requirements, such as property type (villa, apartment), preferred location, bedrooms, and budget. Use the tools to find and present matching properties.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"search_properties",
+				"get_property_details",
+				"check_property_availability",
+				"compare_properties",
+				"get_neighborhood_info",
+				"save_favorite_property"
+			],
+			"transitions": [
+				{
+					"target_node_id": "viewing_scheduling",
+					"condition": {
+						"type": "intent",
+						"intent_description": "After finding a property, the client expresses a desire to see or visit it."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client has found what they need or is otherwise satisfied and wants to end the call."
+					},
+					"priority": 8
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client wants to switch to a different department (e.g., 'What about financing?')."
+					},
+					"priority": 5
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "viewing_scheduling",
+			"type": "conversational",
+			"name": "Viewing Scheduling",
+			"description": "Schedules and manages property viewings.",
+			"prompt": {
+				"system_prompt": "## Role: Viewing Coordinator\nYou are Amina. Your tone is organized and courteous. Your goal is to schedule appointments accurately. ## Guardrail: Always verbally confirm the final appointment details (property, date, time) back to the client.",
+				"instructions": "Confirm you can help schedule a viewing. Ask for the property address and the client's preferred date and time. Use the tools to check availability and book the appointment. If a slot is taken, offer the next two closest alternatives.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"check_viewing_availability",
+				"schedule_viewing",
+				"reschedule_viewing",
+				"cancel_viewing",
+				"get_upcoming_viewings",
+				"send_viewing_confirmation"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The viewing is scheduled and the client is satisfied."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client wants to go back to the main menu or asks about another service."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "financing_info",
+			"type": "conversational",
+			"name": "Financing Information",
+			"description": "Provides general information on property financing.",
+			"prompt": {
+				"system_prompt": "## Role: Financing Advisor\nYou are Amina. Your tone is informative and trustworthy. ## Critical Guardrail: You MUST state that you are not a licensed mortgage professional and that the client should consult one for official advice. This is a non-negotiable legal and ethical requirement.",
+				"instructions": "State that you can provide general financing information. Deliver the disclaimer about not being a licensed advisor. Ask the client if they're interested in the pre-approval process, typical rates, or affordability calculations to guide the conversation.",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"calculate_affordability",
+				"get_mortgage_rates",
+				"check_preapproval_status",
+				"connect_to_lender"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The client's questions are answered and they are satisfied."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client wants to switch to a different service."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "property_management",
+			"type": "conversational",
+			"name": "Property Management",
+			"description": "Handles inquiries for tenants and landlords.",
+			"prompt": {
+				"system_prompt": "## Role: Property Management Specialist\nYou are Amina. Your tone is responsive, efficient, and empathetic. ## Guardrail: When logging a maintenance request, provide a reference number and an expected timeframe.",
+				"instructions": "Introduce yourself as being from the Property Management department. Ask the client for their property address or lease ID to access their file. Ask how you can help with their request (maintenance, lease, rent).",
+				"max_tokens": 250,
+				"temperature": 0.6
+			},
+			"tools": [
+				"submit_maintenance_request",
+				"track_maintenance_status",
+				"view_lease_details",
+				"process_rent_payment"
+			],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The client's issue is resolved or their question is answered."
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome_routing",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Client's request is outside of property management and they need another service."
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "transfer_to_consultant",
+			"type": "conversational",
+			"name": "Transfer to Consultant",
+			"description": "Handles the handoff to a human agent.",
+			"prompt": {
+				"system_prompt": "## Role: Transfer Specialist\nYou are Amina. Your tone is reassuring and efficient. Your goal is to perform a seamless handoff.",
+				"instructions": "Acknowledge the client's request. State that you are connecting them to an expert property consultant. Say 'Please hold for a moment while I connect you.' and then use the transfer tool.",
+				"max_tokens": 100,
+				"temperature": 0.7
+			},
+			"tools": ["transfer"],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "The transfer has been initiated."
+					},
+					"priority": 10
+				}
+			],
+			"preserve_chat_context": false
+		},
+		{
+			"id": "hangup",
+			"type": "hangup",
+			"name": "Call Completion",
+			"description": "End the call gracefully with Amina's persona.",
+			"prompt": {
+				"system_prompt": "## Role: Closer\nYou are Amina. Your tone is warm, appreciative, and professional. Your goal is to end the call on a high note.",
+				"instructions": "Thank the client for their call. Reiterate that it was a pleasure to assist them. Wish them a wonderful day and close with 'Ma'a salama.'",
+				"max_tokens": 100,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [],
+			"preserve_chat_context": false
+		}
+	]
+}

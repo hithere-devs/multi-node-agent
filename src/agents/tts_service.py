@@ -10,29 +10,19 @@ logger = get_logger(__name__)
 
 
 class TTSService(ABC):
-    """Abstract base class for text-to-speech services."""
+    """Base interface for text-to-speech services."""
 
     @abstractmethod
     async def synthesize(self, text: str) -> bytes:
-        """
-        Synthesize text to audio.
-
-        Args:
-            text: Text to synthesize
-
-        Returns:
-            Audio bytes (WAV format)
-        """
+        """Synthesizes text to audio (WAV format)."""
         pass
 
 
 class MockTTSService(TTSService):
-    """Mock TTS service for testing."""
+    """Mock TTS for testing (returns minimal WAV with silence)."""
 
     async def synthesize(self, text: str) -> bytes:
-        """Return mock audio data."""
-        # Return a minimal WAV header + silence
-        # WAV format: 44100 Hz, 16-bit mono, 1 second of silence
+        """Returns mock audio data (1 second of silence)."""
         logger.info("mock_tts_synthesize", text_length=len(text))
 
         wav_header = (
@@ -51,14 +41,13 @@ class MockTTSService(TTSService):
             + b"\x00\xf0\x00\x00"  # Subchunk2Size
         )
 
-        # Add silence data (44100 samples at 16-bit = 88200 bytes for 1 second)
         silence = b"\x00" * 88200
 
         return wav_header + silence
 
 
 class OpenAITTSService(TTSService):
-    """OpenAI TTS service."""
+    """OpenAI TTS API implementation."""
 
     def __init__(
         self,
@@ -66,14 +55,6 @@ class OpenAITTSService(TTSService):
         model: str = "tts-1",
         voice: str = "alloy",
     ) -> None:
-        """
-        Initialize OpenAI TTS service.
-
-        Args:
-            api_key: OpenAI API key
-            model: TTS model name
-            voice: Voice name (alloy, echo, fable, onyx, nova, shimmer)
-        """
         self.model = model
         self.voice = voice
 
@@ -87,7 +68,7 @@ class OpenAITTSService(TTSService):
         self.client = AsyncOpenAI(api_key=api_key)
 
     async def synthesize(self, text: str) -> bytes:
-        """Synthesize text using OpenAI TTS."""
+        """Synthesizes text using OpenAI TTS API."""
         try:
             response = await self.client.audio.speech.create(
                 model=self.model,
@@ -96,7 +77,6 @@ class OpenAITTSService(TTSService):
                 response_format="wav",
             )
 
-            # Read the audio content
             audio_data = io.BytesIO()
             async for chunk in response:
                 audio_data.write(chunk)

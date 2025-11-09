@@ -1,0 +1,206 @@
+{
+	"$schema": "http://json-schema.org/draft-07/schema#",
+	"$id": "https://livekit.io/schemas/multinode-agent.json",
+	"title": "Multi-Node Agent Configuration",
+	"description": "Schema for LiveKit multi-node agent configurations with state machine orchestration",
+	"type": "object",
+	"required": ["id", "name", "version", "entryNode", "nodes"],
+	"properties": {
+		"id": {
+			"type": "string",
+			"description": "Unique identifier for this agent configuration",
+			"pattern": "^[a-z0-9-]+$",
+			"examples": ["ecommerce-multinode-001", "healthcare-assistant-v1"]
+		},
+		"name": {
+			"type": "string",
+			"description": "Human-readable name for the agent",
+			"minLength": 1,
+			"examples": [
+				"E-Commerce Customer Support",
+				"Healthcare Scheduling Assistant"
+			]
+		},
+		"version": {
+			"type": "string",
+			"description": "Version number for tracking configuration changes",
+			"pattern": "^\\d+\\.\\d+(\\.\\d+)?$",
+			"examples": ["1.0", "2.1.3"]
+		},
+		"description": {
+			"type": "string",
+			"description": "Detailed description of agent capabilities and use case"
+		},
+		"agentInstructions": {
+			"type": "string",
+			"description": "Global instructions that apply to all nodes in the agent"
+		},
+		"domainContext": {
+			"type": "string",
+			"description": "Domain-specific context or industry information"
+		},
+		"entryNode": {
+			"type": "string",
+			"description": "ID of the node where conversations begin",
+			"examples": ["welcome", "greeting", "entry"]
+		},
+		"globalTools": {
+			"type": "array",
+			"description": "Tools available across all nodes",
+			"items": {
+				"type": "string",
+				"examples": ["hangup", "transfer", "escalate"]
+			}
+		},
+		"nodes": {
+			"type": "array",
+			"description": "Array of conversation nodes that define agent behavior",
+			"minItems": 1,
+			"items": {
+				"$ref": "#/definitions/Node"
+			}
+		}
+	},
+	"definitions": {
+		"Node": {
+			"type": "object",
+			"required": ["id", "type", "name", "prompt", "transitions"],
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Unique identifier for this node",
+					"pattern": "^[a-z0-9_]+$",
+					"examples": ["welcome", "billing_support", "order_tracking"]
+				},
+				"type": {
+					"type": "string",
+					"description": "Type of node defining its role in conversation flow",
+					"enum": ["entry", "conversational", "tool", "exit"],
+					"examples": ["entry", "conversational"]
+				},
+				"name": {
+					"type": "string",
+					"description": "Human-readable name for the node",
+					"minLength": 1
+				},
+				"description": {
+					"type": "string",
+					"description": "Detailed explanation of node's purpose and behavior"
+				},
+				"prompt": {
+					"$ref": "#/definitions/Prompt",
+					"description": "Prompt configuration for LLM behavior in this node"
+				},
+				"tools": {
+					"type": "array",
+					"description": "Tools available for this specific node",
+					"items": {
+						"type": "string"
+					}
+				},
+				"context": {
+					"type": "object",
+					"description": "Required or optional context variables for this node",
+					"additionalProperties": {
+						"type": "string",
+						"enum": ["required", "optional"]
+					}
+				},
+				"transitions": {
+					"type": "array",
+					"description": "Possible transitions from this node to other nodes",
+					"minItems": 1,
+					"items": {
+						"$ref": "#/definitions/Transition"
+					}
+				}
+			}
+		},
+		"Prompt": {
+			"type": "object",
+			"required": ["template"],
+			"properties": {
+				"template": {
+					"type": "string",
+					"description": "Prompt template with {{variable}} placeholders for dynamic content",
+					"minLength": 1
+				},
+				"systemPrompt": {
+					"type": "string",
+					"description": "System-level instructions for LLM behavior and personality"
+				},
+				"maxTokens": {
+					"type": "integer",
+					"description": "Maximum tokens for LLM response",
+					"minimum": 1,
+					"maximum": 4096,
+					"default": 150
+				},
+				"temperature": {
+					"type": "number",
+					"description": "LLM temperature controlling response randomness (0.0-1.0)",
+					"minimum": 0,
+					"maximum": 1,
+					"default": 0.7
+				}
+			}
+		},
+		"Transition": {
+			"type": "object",
+			"required": ["condition", "targetNode"],
+			"properties": {
+				"condition": {
+					"$ref": "#/definitions/Condition",
+					"description": "Condition that triggers this transition"
+				},
+				"targetNode": {
+					"type": "string",
+					"description": "ID of the node to transition to when condition is met"
+				},
+				"priority": {
+					"type": "integer",
+					"description": "Priority for evaluating this transition (higher = evaluated first)",
+					"minimum": 1,
+					"default": 5
+				},
+				"description": {
+					"type": "string",
+					"description": "Human-readable explanation of this transition"
+				}
+			}
+		},
+		"Condition": {
+			"type": "object",
+			"required": ["type", "expression"],
+			"properties": {
+				"type": {
+					"type": "string",
+					"description": "Type of condition evaluation",
+					"enum": ["intent", "regex", "exact", "variable", "always"]
+				},
+				"expression": {
+					"type": "string",
+					"description": "Expression to evaluate (intent description, regex pattern, exact match string, or variable check)"
+				}
+			},
+			"examples": [
+				{
+					"type": "intent",
+					"expression": "User wants to track order status"
+				},
+				{
+					"type": "regex",
+					"expression": "(?i)(order|track|delivery)"
+				},
+				{
+					"type": "exact",
+					"expression": "speak to supervisor"
+				},
+				{
+					"type": "variable",
+					"expression": "order_id != null"
+				}
+			]
+		}
+	}
+}

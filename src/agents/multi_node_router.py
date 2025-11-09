@@ -15,10 +15,9 @@ logger = get_logger("multi-node-router")
 
 
 class ConversationContext:
-    """Maintains full chat history and context across node transitions."""
+    """Maintains conversation history and state across node transitions."""
 
     def __init__(self):
-        """Initialize conversation context."""
         self.messages: List[Dict[str, str]] = []
         self.variables: Dict[str, Any] = {}
         self.visited_nodes: List[str] = []
@@ -34,40 +33,33 @@ class ConversationContext:
         self.messages.append({"role": role, "content": content})
 
     def add_user_message(self, content: str) -> None:
-        """Add user message."""
         self.add_message("user", content)
 
     def add_assistant_message(self, content: str) -> None:
-        """Add assistant message."""
         self.add_message("assistant", content)
 
     def get_conversation_history(self) -> List[Dict[str, str]]:
-        """Get full conversation history."""
         return self.messages.copy()
 
     def set_variable(self, key: str, value: Any) -> None:
-        """Set context variable."""
         self.variables[key] = value
 
     def get_variable(self, key: str, default: Any = None) -> Any:
-        """Get context variable."""
         return self.variables.get(key, default)
 
     def record_node_visit(self, node_id: str, response: str) -> None:
-        """Record that a node was visited."""
+        """Records node visit in history."""
         self.visited_nodes.append(node_id)
         self.node_history.append({"node_id": node_id, "response": response})
 
     def get_last_node(self) -> Optional[str]:
-        """Get the last visited node."""
         return self.visited_nodes[-1] if self.visited_nodes else None
 
     def has_visited_node(self, node_id: str) -> bool:
-        """Check if a node was visited."""
         return node_id in self.visited_nodes
 
     def get_context_for_llm(self) -> Dict[str, Any]:
-        """Get context data formatted for LLM."""
+        """Returns context formatted for LLM consumption."""
         return {
             "conversation_history": self.get_conversation_history(),
             "variables": self.variables.copy(),
@@ -76,7 +68,7 @@ class ConversationContext:
 
 
 class MultiNodeRouter:
-    """Routes conversations between different nodes based on conditions and user input."""
+    """Routes conversations between nodes based on conditions and context."""
 
     def __init__(self, config: MultiNodeAgentConfig, llm_provider=None):
         """Initialize router with multi-nodal configuration.
@@ -92,19 +84,15 @@ class MultiNodeRouter:
         self.llm_provider = llm_provider
 
     def get_current_node(self):
-        """Get the current node configuration."""
         return self.nodes_map.get(self.current_node_id)
 
     def get_node(self, node_id: str):
-        """Get a node by ID."""
         return self.nodes_map.get(node_id)
 
     def get_context(self) -> ConversationContext:
-        """Get conversation context."""
         return self.context
 
     def reset_context(self) -> None:
-        """Reset conversation context."""
         self.context = ConversationContext()
 
     async def _evaluate_intent_condition(
@@ -177,7 +165,6 @@ Answer only YES or NO."""
                 return not self.evaluate_condition(condition.conditions[0], context)
 
             elif condition.type == ConditionType.TOOL_RESULT:
-                # Tool result conditions checked after tool execution
                 result = context.get("tool_result")
                 return result == condition.value
 
@@ -205,11 +192,9 @@ Answer only YES or NO."""
             logger.error("current_node_not_found", node_id=self.current_node_id)
             return None, False
 
-        # Sort transitions by priority (higher priority first)
         sorted_transitions = sorted(current_node.transitions, key=lambda t: -t.priority)
 
         for transition in sorted_transitions:
-            # Check if this is an intent-based condition
             if transition.condition.type == "intent":
                 user_input = context.get("user_input", "")
                 is_match = await self._evaluate_intent_condition(
@@ -228,7 +213,6 @@ Answer only YES or NO."""
                 )
                 return transition.targetNode, True
 
-        # No valid transition found - try to find a graceful fallback
         fallback_node = self._find_fallback_node(context)
         if fallback_node:
             logger.info(
@@ -238,7 +222,6 @@ Answer only YES or NO."""
             )
             return fallback_node, False
 
-        # Stay in current node if no fallback available
         logger.debug(
             "no_transition_found",
             node_id=self.current_node_id,
@@ -263,7 +246,6 @@ Answer only YES or NO."""
             logger.error("current_node_not_found", node_id=self.current_node_id)
             return None, False
 
-        # Sort transitions by priority (higher priority first)
         sorted_transitions = sorted(current_node.transitions, key=lambda t: -t.priority)
 
         for transition in sorted_transitions:
@@ -276,7 +258,6 @@ Answer only YES or NO."""
                 )
                 return transition.targetNode, True
 
-        # No valid transition found - try to find a graceful fallback
         fallback_node = self._find_fallback_node(context)
         if fallback_node:
             logger.info(
@@ -286,7 +267,6 @@ Answer only YES or NO."""
             )
             return fallback_node, False
 
-        # Stay in current node if no fallback available
         logger.debug(
             "no_transition_found",
             node_id=self.current_node_id,
@@ -315,14 +295,7 @@ Answer only YES or NO."""
         return None
 
     def move_to_node(self, node_id: str) -> bool:
-        """Move router to a specific node.
-
-        Args:
-            node_id: Target node ID
-
-        Returns:
-            True if move successful, False if node doesn't exist
-        """
+        """Moves router to specific node."""
         if node_id not in self.nodes_map:
             logger.error("invalid_node", node_id=node_id)
             return False
@@ -336,14 +309,7 @@ Answer only YES or NO."""
     def get_available_transitions(
         self, context: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
-        """Get all available transitions from current node for the given context.
-
-        Args:
-            context: Context for evaluation
-
-        Returns:
-            List of available transition info
-        """
+        """Returns all available transitions from current node."""
         current_node = self.get_current_node()
         if not current_node:
             return []
@@ -379,7 +345,6 @@ Answer only YES or NO."""
         if from_node not in self.nodes_map or to_node not in self.nodes_map:
             return None
 
-        # BFS to find shortest path
         from collections import deque
 
         queue = deque([(from_node, [from_node])])
@@ -427,17 +392,12 @@ Answer only YES or NO."""
         if not node:
             return self.get_global_tools()
 
-        # Combine node-specific tools with global tools
         tools = set(node.tools or [])
         tools.update(self.get_global_tools())
         return list(tools)
 
     def build_system_prompt_with_paths(self) -> str:
-        """Build system prompt that includes information about all possible paths.
-
-        Returns:
-            Enhanced system prompt with path information
-        """
+        """Builds system prompt including available conversational paths."""
         current_node = self.get_current_node()
         if not current_node:
             return ""

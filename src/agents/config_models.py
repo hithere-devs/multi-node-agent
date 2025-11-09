@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 
 class ConditionType(str, Enum):
-    """Supported condition types for state transitions."""
+    """Types of conditions that can trigger state transitions."""
 
     REGEX = "regex"
     VARIABLE = "variable"
@@ -16,23 +16,23 @@ class ConditionType(str, Enum):
     AND = "and"
     OR = "or"
     NOT = "not"
-    INTENT = "intent"  # LLM-based intent classification
+    INTENT = "intent"
 
 
 class NodeType(str, Enum):
-    """Supported node types in multi-nodal workflows."""
+    """Node types in multi-nodal workflows."""
 
-    ENTRY = "entry"  # Entry point to the conversation
-    CONVERSATION = "conversation"  # Standard conversation node
-    SERVICE = "service"  # Service-specific node (pharmacy, appointments, etc.)
-    TOOL = "tool"  # Tool execution node
-    DECISION = "decision"  # Decision/branching node
-    TRANSITION = "transition"  # State transition node
-    EXIT = "exit"  # Exit/end call node
+    ENTRY = "entry"
+    CONVERSATION = "conversation"
+    SERVICE = "service"
+    TOOL = "tool"
+    DECISION = "decision"
+    TRANSITION = "transition"
+    EXIT = "exit"
 
 
 class ConditionConfig(BaseModel):
-    """Configuration for a transition condition."""
+    """Defines when and how a transition should occur."""
 
     type: ConditionType
     expression: Optional[str] = None
@@ -45,16 +45,16 @@ ConditionConfig.model_rebuild()
 
 
 class TransitionConfig(BaseModel):
-    """Configuration for a state/node transition."""
+    """Defines transition between states with conditions and priority."""
 
     condition: ConditionConfig
-    targetState: Optional[str] = None  # For legacy state machine
-    targetNode: Optional[str] = None  # For multi-nodal system
+    targetState: Optional[str] = None
+    targetNode: Optional[str] = None
     priority: int = 0
 
 
 class NodeTransitionConfig(BaseModel):
-    """Configuration for multi-nodal transitions."""
+    """Transition configuration specific to multi-nodal systems."""
 
     condition: ConditionConfig
     targetNode: str
@@ -63,7 +63,7 @@ class NodeTransitionConfig(BaseModel):
 
 
 class PromptConfig(BaseModel):
-    """Configuration for a prompt template."""
+    """LLM prompt configuration with generation parameters."""
 
     template: str
     maxTokens: int = 100
@@ -72,10 +72,10 @@ class PromptConfig(BaseModel):
 
 
 class ToolCallConfig(BaseModel):
-    """Configuration for a tool that can be called by the agent."""
+    """Configuration for tools callable by the agent."""
 
     id: str
-    type: str  # "hangup", "transfer", "custom"
+    type: str
     name: str
     description: str
     enabled: bool = True
@@ -83,10 +83,10 @@ class ToolCallConfig(BaseModel):
 
 
 class ToolConfig(BaseModel):
-    """Configuration for a tool."""
+    """External tool configuration (HTTP endpoints, functions, etc)."""
 
     id: str
-    type: str  # "http", "lambda", "function"
+    type: str
     name: str
     description: str
     endpoint: Optional[str] = None
@@ -98,19 +98,19 @@ class ToolConfig(BaseModel):
 
 
 class StateConfig(BaseModel):
-    """Configuration for a state in the state machine."""
+    """State machine state configuration."""
 
     id: str
     name: str
     prompt: PromptConfig
-    tools: List[str] = Field(default_factory=list)  # Tool IDs
+    tools: List[str] = Field(default_factory=list)
     transitions: List[TransitionConfig] = Field(default_factory=list)
     fallbackState: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
 
 
 class SessionDefaultsConfig(BaseModel):
-    """Default provider configurations for a session."""
+    """Default provider settings for agent sessions."""
 
     sttModel: str = "assemblyai/universal-streaming"
     llmModel: str = "openai/gpt-4.1-mini"
@@ -120,7 +120,7 @@ class SessionDefaultsConfig(BaseModel):
 
 
 class CustomerConfig(BaseModel):
-    """Complete configuration for a customer."""
+    """Complete customer-specific agent configuration."""
 
     id: str
     name: str
@@ -135,7 +135,7 @@ class CustomerConfig(BaseModel):
 
 
 class SessionConfig(BaseModel):
-    """Session-level configuration and context."""
+    """Runtime session configuration and metadata."""
 
     sessionId: str
     customerId: str
@@ -143,13 +143,12 @@ class SessionConfig(BaseModel):
     agentId: str
     participantId: str
     roomName: str
-    ttlSeconds: int = 3600  # 1 hour default
+    ttlSeconds: int = 3600
     metadata: Optional[Dict[str, Any]] = None
 
 
-# Multi-nodal agent models
 class NodeType(str, Enum):
-    """Types of nodes in multi-nodal flow."""
+    """Node types in multi-nodal workflows."""
 
     ENTRY = "entry"
     SERVICE = "service"
@@ -158,7 +157,7 @@ class NodeType(str, Enum):
 
 
 class ToolDefinition(BaseModel):
-    """Definition of a tool available in a node."""
+    """Defines a tool's interface and requirements."""
 
     name: str
     description: str
@@ -166,39 +165,39 @@ class ToolDefinition(BaseModel):
 
 
 class NodeContextRequirement(BaseModel):
-    """Context requirements for a node."""
+    """Specifies required context data for a node."""
 
     field_name: str
-    requirement_level: str  # "required", "optional", "conditional"
+    requirement_level: str
     description: Optional[str] = None
 
 
 class MultiNodeConfig(BaseModel):
-    """Configuration for a single node in multi-nodal flow."""
+    """Single node configuration in multi-nodal workflow."""
 
     id: str
     type: NodeType
     name: str
     description: Optional[str] = None
     prompt: PromptConfig
-    tools: List[str] = Field(default_factory=list)  # Tool names
-    context: Optional[Dict[str, str]] = None  # Context requirements
+    tools: List[str] = Field(default_factory=list)
+    context: Optional[Dict[str, str]] = None
     transitions: List[NodeTransitionConfig] = Field(default_factory=list)
     metadata: Optional[Dict[str, Any]] = None
 
 
 class MultiNodeAgentConfig(BaseModel):
-    """Complete configuration for multi-nodal agent."""
+    """Complete multi-nodal agent configuration."""
 
     id: str
     name: str
     version: str = "2.0"
     description: Optional[str] = None
-    agentInstructions: Optional[str] = None  # Dynamic agent instructions
-    domainContext: Optional[str] = None  # Domain-specific context
+    agentInstructions: Optional[str] = None
+    domainContext: Optional[str] = None
     entryNode: str
     nodes: List[MultiNodeConfig]
-    globalTools: List[str] = Field(default_factory=list)  # Global tool names
+    globalTools: List[str] = Field(default_factory=list)
     validationRules: Optional[Dict[str, Any]] = None
     sessionDefaults: SessionDefaultsConfig = Field(
         default_factory=SessionDefaultsConfig

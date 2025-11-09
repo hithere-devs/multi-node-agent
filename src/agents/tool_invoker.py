@@ -12,15 +12,9 @@ logger = get_logger(__name__)
 
 
 class ToolInvoker:
-    """Invokes tools (HTTP endpoints, Lambda functions, local handlers)."""
+    """Invokes external tools (HTTP endpoints, Lambda functions, local handlers)."""
 
     def __init__(self, function_registry: Optional[Dict[str, Callable]] = None) -> None:
-        """
-        Initialize the tool invoker.
-
-        Args:
-            function_registry: Dictionary of local function handlers by ID
-        """
         self.function_registry = function_registry or {}
         self.http_client = httpx.AsyncClient(timeout=30.0)
 
@@ -86,7 +80,6 @@ class ToolInvoker:
 
         headers = tool.headers or {}
         if tool.credentials:
-            # Inject credentials (e.g., Authorization header)
             if "Authorization" in tool.credentials:
                 headers["Authorization"] = tool.credentials["Authorization"]
 
@@ -132,7 +125,6 @@ class ToolInvoker:
         handler = self.function_registry[tool.id]
 
         try:
-            # Support both sync and async functions
             if asyncio.iscoroutinefunction(handler):
                 result = await asyncio.wait_for(
                     handler(payload),
@@ -169,5 +161,5 @@ class ToolInvoker:
         logger.info("function_registered", function_id=function_id)
 
     async def close(self) -> None:
-        """Close HTTP client and cleanup resources."""
+        """Closes HTTP client and cleans up resources."""
         await self.http_client.aclose()

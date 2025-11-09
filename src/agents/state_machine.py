@@ -15,7 +15,7 @@ logger = get_logger(__name__)
 
 @dataclass
 class SessionContext:
-    """Tracks context for a user session."""
+    """Tracks session state including variables, history, and tool results."""
 
     session_id: str
     customer_id: str
@@ -26,24 +26,17 @@ class SessionContext:
     tool_results: Dict[str, Any] = field(default_factory=dict)
 
     def add_to_history(self, entry: Dict[str, Any]) -> None:
-        """Add an entry to the session history."""
         self.history.append(entry)
 
     def set_variable(self, key: str, value: Any) -> None:
-        """Set a session variable."""
         self.variables[key] = value
 
     def get_variable(self, key: str, default: Any = None) -> Any:
-        """Get a session variable."""
         return self.variables.get(key, default)
 
 
 class StateMachineEngine:
-    """
-    Orchestrates multi-prompt agent workflows.
-
-    Manages state transitions, prompt rendering, LLM calls, and tool invocations.
-    """
+    """Orchestrates multi-prompt agent workflows with state transitions."""
 
     def __init__(
         self,
@@ -52,15 +45,6 @@ class StateMachineEngine:
         llm: LLMProvider,
         tools: ToolInvoker,
     ) -> None:
-        """
-        Initialize the state machine engine.
-
-        Args:
-            config: Customer configuration
-            renderer: Prompt renderer
-            llm: LLM provider
-            tools: Tool invoker
-        """
         self.config = config
         self.renderer = renderer
         self.llm = llm
@@ -142,7 +126,6 @@ class StateMachineEngine:
             }
         )
 
-        # Evaluate transitions
         next_state = await self._evaluate_transitions(
             session,
             state,
@@ -200,7 +183,6 @@ class StateMachineEngine:
             ):
                 return transition.targetState
 
-        # No matching transition - stay in current state or use fallback
         if state.fallbackState:
             return state.fallbackState
 
@@ -228,7 +210,6 @@ class StateMachineEngine:
             logger.warning("tool_not_found", tool_name=tool_name)
             return {"error": f"Tool not found: {tool_name}"}
 
-        # Prepare payload
         payload = {}
         if tool_config.payloadTemplate:
             try:
@@ -240,7 +221,6 @@ class StateMachineEngine:
                 logger.error("payload_template_render_failed", error=str(e))
                 return {"error": f"Failed to render payload: {e}"}
 
-        # Merge with arguments from LLM
         if tool_call.get("arguments"):
             try:
                 import json
@@ -250,7 +230,6 @@ class StateMachineEngine:
             except json.JSONDecodeError:
                 logger.error("tool_arguments_parse_failed")
 
-        # Invoke tool
         result = await self.tools.invoke(tool_config, payload)
 
         logger.info(
@@ -263,14 +242,13 @@ class StateMachineEngine:
         return result
 
     def _get_state(self, state_id: str) -> Optional[StateConfig]:
-        """Get state by ID."""
         for state in self.config.states:
             if state.id == state_id:
                 return state
         return None
 
     def get_entry_state(self) -> StateConfig:
-        """Get the entry state for the agent."""
+        """Returns the entry state configuration."""
         state = self._get_state(self.config.entryState)
         if not state:
             raise ValueError(f"Entry state not found: {self.config.entryState}")

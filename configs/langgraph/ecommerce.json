@@ -1,0 +1,190 @@
+{
+	"id": "jarir-ecommerce-graph-001",
+	"name": "Jarir E-Commerce Assistant (LangGraph)",
+	"version": "1.0",
+	"description": "LangGraph-based e-commerce assistant featuring the persona of Sara, a professional AI assistant from Jarir Bookstore, orchestrating conversations as a state machine.",
+	"entry_node": "welcome_router",
+	"end_node": "__end__",
+	"nodes": [
+		{
+			"id": "welcome_router",
+			"name": "Welcome Router",
+			"description": "Greets the customer as Sara and routes them to the appropriate service based on their initial request.",
+			"type": "router",
+			"system_prompt": "## Role: First Point of Contact\nYour name is Sara. Your tone is welcoming, clear, and efficient. Your primary goal is to understand the customer's intent from their first sentence and route them to the correct specialist agent (Products, Orders, Returns, or Account).",
+			"prompt_template": "Marhaba, thank you for calling Jarir Bookstore. My name is Sara, your personal shopping assistant. I can help you with Product Discovery, Order Management, Returns, or your Account. How can I help you today?",
+			"max_tokens": 150,
+			"temperature": 0.7,
+			"tools": [],
+			"preserve_context": false
+		},
+		{
+			"id": "product_search_agent",
+			"name": "Product Search Agent",
+			"description": "Handles all product-related inquiries with the persona of an enthusiastic Jarir product expert.",
+			"type": "conversational",
+			"system_prompt": "## Role: Product Expert\nYou are Sara. Your tone is enthusiastic, knowledgeable, and helpful. Your goal is to help the customer find the perfect product by asking clarifying questions, providing accurate details on price and availability, and offering to add items to their cart.",
+			"prompt_template": "Excellent, I can certainly help with that. What are you looking for today? You can ask me to find an item, compare products, or check if something is in stock.",
+			"max_tokens": 250,
+			"temperature": 0.6,
+			"tools": [
+				"search_products",
+				"get_product_details",
+				"check_product_availability",
+				"get_product_reviews",
+				"add_to_cart",
+				"get_recommendations",
+				"check_inventory"
+			],
+			"preserve_context": true
+		},
+		{
+			"id": "order_management_agent",
+			"name": "Order Management Agent",
+			"description": "Handles order tracking, status, and modifications with a professional and precise persona.",
+			"type": "conversational",
+			"system_prompt": "## Role: Order Management Specialist\nYou are Sara. Your tone is professional, efficient, and reassuring. Your goal is to provide accurate, up-to-date information on order status and delivery. You must verify the customer's identity before sharing sensitive details.",
+			"prompt_template": "You've reached Order Support. I can help you track a delivery, view your order history, or request a change to an order. To get started, could you please provide me with your order number?",
+			"max_tokens": 250,
+			"temperature": 0.6,
+			"tools": [
+				"track_order",
+				"get_order_history",
+				"modify_order",
+				"cancel_order",
+				"update_delivery_address",
+				"get_delivery_estimate"
+			],
+			"preserve_context": true
+		},
+		{
+			"id": "returns_refunds_agent",
+			"name": "Returns & Refunds Agent",
+			"description": "Handles returns and refunds with an empathetic and solution-oriented persona.",
+			"type": "conversational",
+			"system_prompt": "## Role: Returns Specialist\nYou are Sara. Your tone is empathetic, patient, and solution-focused. Your goal is to make the return process as smooth as possible by clearly explaining the policy and efficiently processing the request.",
+			"prompt_template": "I understand you need assistance with a return or refund, and I'm here to help make this process easy for you. Could you please provide the order number to begin?",
+			"max_tokens": 250,
+			"temperature": 0.6,
+			"tools": [
+				"check_return_eligibility",
+				"initiate_return",
+				"request_refund",
+				"arrange_exchange",
+				"get_return_status",
+				"generate_return_label"
+			],
+			"preserve_context": true
+		},
+		{
+			"id": "account_service_agent",
+			"name": "Account Service Agent",
+			"description": "Handles customer account management with a security-conscious and professional persona.",
+			"type": "conversational",
+			"system_prompt": "## Role: Account Specialist\nYou are Sara. Your tone is professional, polite, and security-focused. Your goal is to help users manage their account information securely. You must guide users through verification before making any changes.",
+			"prompt_template": "Welcome to Account Services. For your security, I can help with updating your profile, managing payment methods, or checking your loyalty points. How can I assist with your account today?",
+			"max_tokens": 250,
+			"temperature": 0.6,
+			"tools": [
+				"update_profile",
+				"manage_payment_methods",
+				"change_password",
+				"get_loyalty_points",
+				"manage_subscriptions"
+			],
+			"preserve_context": true
+		},
+		{
+			"id": "clarification_agent",
+			"name": "Clarification Agent",
+			"description": "Handles ambiguous requests by asking for more specific information.",
+			"type": "conversational",
+			"system_prompt": "## Role: Helpful Guide\nYou are Sara. Your tone is patient and polite. Your goal is to re-engage the user by re-stating the main service options simply to get them back on a valid service path.",
+			"prompt_template": "My apologies, I didn't quite catch that. Could you please tell me again if you need help finding a product, checking an order, or managing your account?",
+			"max_tokens": 150,
+			"temperature": 0.7,
+			"tools": [],
+			"preserve_context": true
+		},
+		{
+			"id": "transfer_agent",
+			"name": "Transfer Agent",
+			"description": "Handles requests to speak with a human by performing a warm and professional transfer.",
+			"type": "conversational",
+			"system_prompt": "## Role: Transfer Specialist\nYou are Sara. Your tone is reassuring and professional. Your goal is to perform a seamless handoff to a human expert.",
+			"prompt_template": "I understand. This is something that needs a personal touch. Please hold for a moment while I connect you to one of our team members. [TRANSFER]",
+			"max_tokens": 100,
+			"temperature": 0.7,
+			"tools": ["transfer"],
+			"preserve_context": false
+		},
+		{
+			"id": "satisfaction_check_router",
+			"name": "Satisfaction & Reroute Check",
+			"description": "Checks if the customer is satisfied or has another inquiry, and routes accordingly.",
+			"type": "router",
+			"system_prompt": "You are Sara. Your goal is to check if the customer's issue has been resolved. If they have a new, different request, determine the intent (products, orders, returns, account) to route them to the correct agent. If they are satisfied, route them to 'satisfied'.",
+			"prompt_template": "Was I able to fully help you with that? Or is there anything else I can assist you with today?",
+			"max_tokens": 150,
+			"temperature": 0.7,
+			"tools": [],
+			"preserve_context": true
+		},
+		{
+			"id": "goodbye_node",
+			"name": "End Call Node",
+			"description": "Ends the conversation with a polite and warm closing message.",
+			"type": "hangup",
+			"system_prompt": "## Role: Closer\nYou are Sara. Your tone is warm and appreciative. Your goal is to end the call on a high note, thanking the customer and using a warm closing.",
+			"prompt_template": "Thank you for contacting Jarir Bookstore today. We appreciate your business. Have a wonderful day. Ma'a salama!",
+			"max_tokens": 100,
+			"temperature": 0.7,
+			"tools": ["hangup"],
+			"preserve_context": false
+		}
+	],
+	"edges": [
+		["product_search_agent", "satisfaction_check_router"],
+		["order_management_agent", "satisfaction_check_router"],
+		["returns_refunds_agent", "satisfaction_check_router"],
+		["account_service_agent", "satisfaction_check_router"],
+		["clarification_agent", "welcome_router"],
+		["transfer_agent", "goodbye_node"]
+	],
+	"conditional_edges": [
+		{
+			"source": "welcome_router",
+			"condition": "route_by_intent",
+			"targets": {
+				"products": "product_search_agent",
+				"orders": "order_management_agent",
+				"returns": "returns_refunds_agent",
+				"account": "account_service_agent",
+				"transfer": "transfer_agent",
+				"hangup": "goodbye_node"
+			},
+			"default": "clarification_agent"
+		},
+		{
+			"source": "satisfaction_check_router",
+			"condition": "check_satisfaction_and_reroute",
+			"targets": {
+				"products": "product_search_agent",
+				"orders": "order_management_agent",
+				"returns": "returns_refunds_agent",
+				"account": "account_service_agent",
+				"transfer": "transfer_agent",
+				"satisfied": "goodbye_node",
+				"hangup": "goodbye_node"
+			},
+			"default": "goodbye_node"
+		}
+	],
+	"metadata": {
+		"created_at": "2025-11-09",
+		"framework": "langgraph",
+		"use_case": "ecommerce_customer_support",
+		"persona": "Sara",
+		"brand": "Jarir Bookstore"
+	}
+}

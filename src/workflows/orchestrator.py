@@ -25,11 +25,6 @@ class WorkflowOrchestrator:
     """Orchestrates node-based workflow execution."""
 
     def __init__(self, workflow_config: WorkflowConfig):
-        """Initialize workflow orchestrator.
-
-        Args:
-            workflow_config: Complete workflow configuration
-        """
         self.config = workflow_config
         self.nodes_by_id: Dict[str, NodeConfig] = {
             node.id: node for node in workflow_config.nodes
@@ -50,14 +45,7 @@ class WorkflowOrchestrator:
         )
 
     def get_node_config(self, node_id: str) -> Optional[NodeConfig]:
-        """Get configuration for a specific node.
-
-        Args:
-            node_id: ID of the node
-
-        Returns:
-            Node configuration or None if not found
-        """
+        """Retrieves configuration for a specific node."""
         return self.nodes_by_id.get(node_id)
 
     def create_node_agent(
@@ -101,38 +89,22 @@ class WorkflowOrchestrator:
         )
 
     def get_entry_agent(self) -> BaseNodeAgent:
-        """Get the initial entry agent for the workflow.
-
-        Returns:
-            Agent instance for the entry node
-        """
+        """Returns the initial entry agent for the workflow."""
         return self.create_node_agent(self.config.entry_node_id)
 
 
-# Global orchestrator instance
 _orchestrator: Optional[WorkflowOrchestrator] = None
 
 
 def initialize_orchestrator(workflow_config: WorkflowConfig) -> WorkflowOrchestrator:
-    """Initialize the global workflow orchestrator.
-
-    Args:
-        workflow_config: Workflow configuration
-
-    Returns:
-        Initialized orchestrator
-    """
+    """Initializes the global workflow orchestrator."""
     global _orchestrator
     _orchestrator = WorkflowOrchestrator(workflow_config)
     return _orchestrator
 
 
 def get_orchestrator() -> Optional[WorkflowOrchestrator]:
-    """Get the global workflow orchestrator.
-
-    Returns:
-        Current orchestrator instance or None
-    """
+    """Returns the global workflow orchestrator."""
     return _orchestrator
 
 
@@ -208,7 +180,6 @@ def load_workflow_from_json(json_path: str) -> WorkflowConfig:
             )
             transitions.append(transition)
 
-        # Create node config
         node = NodeConfig(
             id=node_data.get("id"),
             type=NodeType(node_data.get("type")),
@@ -223,7 +194,6 @@ def load_workflow_from_json(json_path: str) -> WorkflowConfig:
         )
         nodes.append(node)
 
-    # Create workflow config
     workflow = WorkflowConfig(
         id=data.get("id"),
         name=data.get("name"),
