@@ -138,11 +138,13 @@ class BaseNodeAgent(Agent):
 
 
 class WelcomeNodeAgent(BaseNodeAgent):
-
-
-class WelcomeNodeAgent(BaseNodeAgent):
     """Welcome/entry node agent."""
 
+    def __init__(
+        self,
+        node_config: NodeConfig,
+        workflow_state: Dict[str, Any],
+        chat_ctx: Optional[ChatContext] = None,
     ):
         super().__init__(node_config, workflow_state, chat_ctx)
 
