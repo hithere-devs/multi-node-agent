@@ -7,7 +7,7 @@ orchestration systems.
 
 1. [Overview](#overview)
 2. [Multi-Node Agent Schema](#multi-node-agent-schema)
-3. [Workflow Agent Schema](#workflow-agent-schema)
+3. [Livekit Workflow Agent Schema](#workflow-agent-schema)
 4. [LangGraph Agent Schema](#langgraph-agent-schema)
 5. [Comparison & Choosing a Schema](#comparison--choosing-a-schema)
 6. [Best Practices](#best-practices)
