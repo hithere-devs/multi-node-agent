@@ -169,14 +169,7 @@ required keys:
 - `LIVEKIT_URL`
 - `LIVEKIT_API_KEY`
 - `LIVEKIT_API_SECRET`
-
-You can optionally load the LiveKit environment using the
-[LiveKit CLI](https://docs.livekit.io/home/cli/cli-setup):
-
-```bash
-lk cloud auth
-lk app env -w -d .env.local
-```
+- `OPENAI_API_KEY`
 
 ## Run the agent
 
@@ -185,14 +178,13 @@ lk app env -w -d .env.local
 Use the interactive CLI to select orchestration style and customer config:
 
 ```console
-python run_agent.py
+uv run python run_agent.py
 ```
 
 The CLI will guide you through:
 
-1. Select agent type: Workflow, Multi‑Node, or LangGraph
+1. Select agent type: Livekit Workflow, Multi‑Node, or LangGraph
 2. Choose configuration: Pick a customer (ecommerce/healthcare/realestate)
-3. Select mode: Console (text) or Dev (voice with LiveKit)
 
 ### Manual running
 
@@ -213,18 +205,6 @@ uv run python run_agent.py
 Follow the prompts to choose agent type (Workflow/Multi‑Node/LangGraph), a
 customer config (ecommerce/healthcare/realestate), and a mode (console or dev).
 The selected agent will start automatically.
-
-To run the agent for use with a frontend or telephony, use the `dev` command:
-
-```console
-uv run python src/agent.py dev
-```
-
-In production, use the `start` command:
-
-```console
-uv run python src/agent.py start
-```
 
 ## Extending
 
