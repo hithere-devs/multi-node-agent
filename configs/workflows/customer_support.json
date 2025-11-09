@@ -1,0 +1,161 @@
+{
+	"id": "customer-support-workflow",
+	"name": "Customer Support Workflow",
+	"version": "1.0",
+	"description": "A simple customer support workflow with welcome, routing, and specialized agents",
+	"entry_node_id": "welcome",
+	"global_tools": [],
+	"nodes": [
+		{
+			"id": "welcome",
+			"type": "welcome",
+			"name": "Welcome & Routing",
+			"description": "Initial greeting and route to appropriate department",
+			"prompt": {
+				"system_prompt": "You are a friendly customer service representative. Your job is to warmly greet customers and route them to the appropriate department based on their needs.",
+				"instructions": "Greet the customer warmly and ask how you can help them today. Listen for keywords about billing, technical support, or general questions.",
+				"max_tokens": 150,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [
+				{
+					"target_node_id": "billing_support",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer needs help with billing, payments, invoices, or account charges"
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "technical_support",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer needs technical help, troubleshooting, or product support"
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "general_inquiry",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer has general questions or other inquiries"
+					},
+					"priority": 5
+				}
+			],
+			"preserve_chat_context": false
+		},
+		{
+			"id": "billing_support",
+			"type": "conversational",
+			"name": "Billing Support",
+			"description": "Handle billing and payment inquiries",
+			"prompt": {
+				"system_prompt": "You are a billing specialist. You help customers with account questions, payments, refunds, and billing inquiries. Be thorough and empathetic.",
+				"instructions": "Introduce yourself as a billing specialist. Ask the customer about their specific billing concern and help them resolve it.",
+				"max_tokens": 200,
+				"temperature": 0.6
+			},
+			"tools": [],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer is satisfied and wants to end the call"
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer wants to speak to a different department"
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "technical_support",
+			"type": "conversational",
+			"name": "Technical Support",
+			"description": "Handle technical issues and troubleshooting",
+			"prompt": {
+				"system_prompt": "You are a technical support specialist. Help customers troubleshoot product issues, setup problems, and technical questions. Ask clarifying questions to diagnose problems effectively.",
+				"instructions": "Introduce yourself as a technical support specialist. Ask about the specific issue they're experiencing and guide them through troubleshooting steps.",
+				"max_tokens": 200,
+				"temperature": 0.6
+			},
+			"tools": [],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Issue is resolved and customer wants to end the call"
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer needs a different department"
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "general_inquiry",
+			"type": "conversational",
+			"name": "General Inquiry",
+			"description": "Handle general questions and information requests",
+			"prompt": {
+				"system_prompt": "You are a helpful customer service representative handling general inquiries. Provide information about the company, products, and services.",
+				"instructions": "Ask what information they need and provide helpful, accurate responses.",
+				"max_tokens": 150,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [
+				{
+					"target_node_id": "hangup",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer's questions are answered and they want to end the call"
+					},
+					"priority": 10
+				},
+				{
+					"target_node_id": "welcome",
+					"condition": {
+						"type": "intent",
+						"intent_description": "Customer needs specialized help from another department"
+					},
+					"priority": 8
+				}
+			],
+			"preserve_chat_context": true
+		},
+		{
+			"id": "hangup",
+			"type": "hangup",
+			"name": "Call Completion",
+			"description": "End the call gracefully",
+			"prompt": {
+				"system_prompt": "You are ending the call professionally.",
+				"instructions": "Thank the customer for calling, wish them a great day, and say goodbye warmly.",
+				"max_tokens": 100,
+				"temperature": 0.7
+			},
+			"tools": [],
+			"transitions": [],
+			"preserve_chat_context": false
+		}
+	]
+}
