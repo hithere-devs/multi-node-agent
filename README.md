@@ -158,7 +158,9 @@ above.
 Clone the repository and install dependencies to a virtual environment:
 
 ```console
-cd agent-starter-python
+# Ensure uv is installed first: https://github.com/astral-sh/uv (e.g. `pip install uv` or follow official docs)
+
+cd multi-node-agent
 uv sync
 ```
 
